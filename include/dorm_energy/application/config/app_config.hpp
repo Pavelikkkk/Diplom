@@ -4,11 +4,6 @@
 #include <cstddef>
 #include <string>
 
-namespace dorm_energy::cli
-{
-    struct CommandOptions;
-}
-
 namespace dorm_energy::application
 {
     class AppConfig // в будущем возможно раздилить его
@@ -48,7 +43,6 @@ namespace dorm_energy::application
         static AppConfig loadFromEnvFile(const std::string &filename = ".env");
 
         void overrideFromEnvironment();
-        void overrideFromCli(const cli::CommandOptions &cli);
 
         std::string getDbConnectionString() const;
 

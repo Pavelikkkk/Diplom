@@ -9,7 +9,9 @@
 
 namespace dorm_energy::application::factories
 {
-    RepositoryFactory::RepositoryFactory(const AppConfig &config) : config_(config) {}
+    RepositoryFactory::RepositoryFactory(
+        const AppConfig &config)
+        : config_(config) {}
 
     std::shared_ptr<storage::IMeasurementRepository> RepositoryFactory::create()
     {
@@ -22,8 +24,7 @@ namespace dorm_energy::application::factories
         {
             const std::string connStr = config_.getDbConnectionString();
 
-            repository_ = std::make_shared<storage::PostgresMeasurementRepository>(
-                connStr, config_.getDbMaxBufferSize());
+            repository_ = std::make_shared<storage::PostgresMeasurementRepository>(connStr, config_.getDbMaxBufferSize());
 
             return repository_;
         }

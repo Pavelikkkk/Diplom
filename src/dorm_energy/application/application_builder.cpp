@@ -1,8 +1,7 @@
 #include "dorm_energy/application/application_builder.hpp"
 
 #include "dorm_energy/application/application.hpp"
-#include "dorm_energy/application/imessage_handler.hpp"
-#include "dorm_energy/application/inotifier.hpp"
+#include "dorm_energy/application/factories/logger_factory.hpp"
 
 #include <memory>
 #include <utility>
@@ -19,34 +18,18 @@ namespace dorm_energy::application
     {
         config_.validate();
 
-        auto repository = repositoryFactory_.create();
-        auto aggregator = stateFactory_.createAggregator();
-
+        auto appConfig = std::make_shared<const AppConfig>(config_);
         auto cliParser = cliFactory_.createParser();
 
-        auto simulateCommand = commandFactory_.createSimulateCommand(
-            loggerFactory_.create(),
-            simulationFactory_.createGenerator(repository),
-            detectionFactory_.create(), repository);
+        factories::LoggerFactory loggerFactory{*appConfig};
+        auto logger = loggerFactory.create();
+        
+        auto commandFactory = std::make_unique<factories::CommandFactory>(*appConfig, logger);
 
-        auto authService = authFactory_.create(repository);
-        auto webServer = webServerFactory_.create(aggregator, repository, authService);
-
-        auto messageHandler = messageHandlerFactory_.create(
-            detectionFactory_.create(),
-            repository, notificationFactory_.create(),
-            aggregator);
-
-        auto daemonCommand = commandFactory_.createDaemonCommand(
-            loggerFactory_.create(),
-            mqttFactory_.createConnection(),
-            mqttFactory_.createSubscription(),
-            mqttFactory_.createDispatcher(),
-            std::move(messageHandler),
-            webServer);
-
-        return std::make_unique<Application>(config_, std::move(cliParser),
-                                             std::move(simulateCommand), std::move(daemonCommand),
-                                             repository);
+        return std::make_unique<Application>(
+            std::move(appConfig),
+            std::move(logger),
+            std::move(cliParser),
+            std::move(commandFactory));
     }
 } // namespace dorm_energy::application

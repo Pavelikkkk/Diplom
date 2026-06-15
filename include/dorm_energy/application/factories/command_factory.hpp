@@ -1,70 +1,45 @@
 #pragma once
 
+#include "dorm_energy/application/cli/command_options.hpp"
+#include "dorm_energy/application/commands/icommand.hpp"
 #include "dorm_energy/application/config/app_config.hpp"
+#include "dorm_energy/application/factories/auth_factory.hpp"
+#include "dorm_energy/application/factories/detection_factory.hpp"
+#include "dorm_energy/application/factories/message_handler_factory.hpp"
+#include "dorm_energy/application/factories/mqtt_factory.hpp"
+#include "dorm_energy/application/factories/notification_factory.hpp"
+#include "dorm_energy/application/factories/repository_factory.hpp"
+#include "dorm_energy/application/factories/simulation_factory.hpp"
+#include "dorm_energy/application/factories/state_factory.hpp"
+#include "dorm_energy/application/factories/web_server_factory.hpp"
+#include "dorm_energy/domain/logging/ilogger.hpp"
 
 #include <memory>
 
-namespace dorm_energy::application
-{
-    class DaemonCommand;
-    class IMessageHandler;
-    class SimulateCommand;
-} 
-
-namespace dorm_energy::detection
-{
-    class IStateDetector;
-}
-
-namespace dorm_energy::logging
-{
-    class ILogger;
-}
-
-namespace dorm_energy::mqtt
-{
-    class IMqttConnection;
-    class IMqttMessageDispatcher;
-    class IMqttSubscription;
-} 
-
-namespace dorm_energy::simulation
-{
-    class IDataGenerator;
-}
-
-namespace dorm_energy::storage
-{
-    class IMeasurementRepository;
-}
-
-namespace dorm_energy::web
-{
-    class WebServer;
-}
-
 namespace dorm_energy::application::factories
 {
+    namespace logging = dorm_energy::logging;
+
     class CommandFactory
     {
     public:
-        explicit CommandFactory(const AppConfig &config);
+        explicit CommandFactory(const AppConfig &config,
+                                std::shared_ptr<logging::ILogger> logger);
 
-        std::unique_ptr<SimulateCommand>
-        createSimulateCommand(std::shared_ptr<logging::ILogger> logger,
-                              std::unique_ptr<simulation::IDataGenerator> generator,
-                              std::unique_ptr<detection::IStateDetector> detector,
-                              std::shared_ptr<storage::IMeasurementRepository> repository) const;
-
-        std::unique_ptr<DaemonCommand>
-        createDaemonCommand(std::shared_ptr<logging::ILogger> logger,
-                            std::shared_ptr<mqtt::IMqttConnection> mqttConnection,
-                            std::shared_ptr<mqtt::IMqttSubscription> mqttSubscription,
-                            std::shared_ptr<mqtt::IMqttMessageDispatcher> mqttDispatcher,
-                            std::unique_ptr<IMessageHandler> messageHandler,
-                            std::shared_ptr<web::WebServer> webServer) const;
+        std::unique_ptr<ICommand> createCommand(const cli::CommandOptions &options);
 
     private:
         const AppConfig &config_;
+        std::shared_ptr<logging::ILogger> logger_;
+
+        AuthFactory authFactory_;
+        DetectionFactory detectionFactory_;
+        MessageHandlerFactory messageHandlerFactory_;
+        MqttFactory mqttFactory_;
+        NotificationFactory notificationFactory_;
+        RepositoryFactory repositoryFactory_;
+        SimulationFactory simulationFactory_;
+        StateFactory stateFactory_;
+        WebServerFactory webServerFactory_;
     };
 } // namespace dorm_energy::application::factories

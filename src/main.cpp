@@ -25,12 +25,12 @@ int main(int argc, char **argv)
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Critical error: " << e.what() << std::endl;
+        std::cerr << "Critical error:\n" << e.what(); 
         return 1;
     }
     catch (...)
     {
-        std::cerr << "Unknown error occurred!" << std::endl;
+        std::cerr << "Unknown error occurred!\n"; 
         return 1;
     }
 }

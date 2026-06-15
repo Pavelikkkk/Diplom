@@ -286,25 +286,6 @@ namespace dorm_energy::application
             telegramChatId_ = val;
     }
 
-    void AppConfig::overrideFromCli(const cli::CommandOptions &cli)
-    {
-        if (cli.common.verbose)
-            verbose_ = true;
-
-        if (cli.isSimulate())
-        {
-            simulationDays_ = cli.simulateDays;
-            injectAnomalies_ = cli.injectAnomalies;
-            anomalyRate_ = cli.anomalyRate;
-        }
-
-        if (!cli.mqttBroker.empty())
-            mqttBroker_ = cli.mqttBroker;
-
-        if (!cli.mqttTopic.empty())
-            mqttTopic_ = cli.mqttTopic;
-    }
-
     std::string AppConfig::getDbConnectionString() const
     {
         std::ostringstream oss;

@@ -1,8 +1,7 @@
-// include/dorm_energy/application/commands/simulate_command.hpp
 #pragma once
 
-#include "dorm_energy/application/cli/command_options.hpp"
-
+#include "dorm_energy/application/commands/icommand.hpp"
+#include "dorm_energy/application/config/app_config.hpp"
 #include "dorm_energy/domain/detection/istate_detector.hpp"
 #include "dorm_energy/domain/logging/ilogger.hpp"
 #include "dorm_energy/domain/simulation/idata_generator.hpp"
@@ -12,31 +11,23 @@
 
 namespace dorm_energy::application
 {
-
-    /**
-     * @brief Команда симуляции генерации данныё
-     */
-    class SimulateCommand
+    class SimulateCommand : public ICommand
     {
     public:
         explicit SimulateCommand(
-            std::shared_ptr<dorm_energy::logging::ILogger> logger,
+            std::shared_ptr<dorm_energy::logging::ILogger> logger, const AppConfig &config,
             std::unique_ptr<dorm_energy::simulation::IDataGenerator> generator,
             std::unique_ptr<dorm_energy::detection::IStateDetector> detector,
             std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository);
 
-        /**
-         * @brief Выполняет симуляцию
-         * @param options параметры из командной строки
-         * @return код завершения
-         */
-        int execute(const cli::CommandOptions &options);
+        bool canHandle(const cli::CommandOptions &options) const override;
+        int execute(const cli::CommandOptions &options) override;
 
     private:
         std::shared_ptr<dorm_energy::logging::ILogger> logger_;
+        const AppConfig &config_;
         std::unique_ptr<dorm_energy::simulation::IDataGenerator> generator_;
         std::unique_ptr<dorm_energy::detection::IStateDetector> detector_;
         std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository_;
     };
-
 } // namespace dorm_energy::application

@@ -6,7 +6,9 @@
 
 namespace dorm_energy::application::factories
 {
-    MqttFactory::MqttFactory(const AppConfig &config) : config_(config) {}
+    MqttFactory::MqttFactory(
+        const AppConfig &config) 
+        : config_(config) {}
 
     std::shared_ptr<mqtt::MqttClient> MqttFactory::createClient()
     {

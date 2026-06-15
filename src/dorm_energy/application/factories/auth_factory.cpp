@@ -9,17 +9,21 @@
 
 namespace dorm_energy::application::factories
 {
-    AuthFactory::AuthFactory(const AppConfig &config) : config_(config) {}
+    AuthFactory::AuthFactory(
+        const AppConfig &config)
+        : config_(config) {}
 
-    std::shared_ptr<::AuthService>
-    AuthFactory::create(std::shared_ptr<storage::IMeasurementRepository> repository) const
+    std::shared_ptr<::AuthService> AuthFactory::create(
+        std::shared_ptr<storage::IMeasurementRepository> repository) const
     {
         auto passwordHasher = std::make_shared<OpenSslPasswordHasher>();
 
         // TODO: move to environment/config.
         auto jwtService = std::make_shared<JwtService>("super-secret-key");
 
-        return std::make_shared<::AuthService>(std::move(repository), std::move(passwordHasher),
-                                               std::move(jwtService));
+        return std::make_shared<::AuthService>(
+            std::move(repository),
+            std::move(passwordHasher),
+            std::move(jwtService));
     }
 } // namespace dorm_energy::application::factories

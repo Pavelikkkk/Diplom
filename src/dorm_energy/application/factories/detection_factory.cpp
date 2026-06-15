@@ -9,17 +9,19 @@
 
 namespace dorm_energy::application::factories
 {
-    DetectionFactory::DetectionFactory(const AppConfig &config) : config_(config) {}
+    DetectionFactory::DetectionFactory(
+        const AppConfig &config)
+        : config_(config) {}
 
     std::unique_ptr<detection::IStateDetector> DetectionFactory::create() const
     {
         auto ruleDetector = std::make_unique<detection::RuleBasedDetector>(25.0);
 
         // TODO: move to config.
-        auto mlDetector =
-            std::make_unique<detection::OnnxDetector>("../../ml/models/anomaly_autoencoder.onnx");
+        auto mlDetector = std::make_unique<detection::OnnxDetector>("../../ml/models/anomaly_autoencoder.onnx");
 
-        return std::make_unique<detection::HybridDetector>(std::move(ruleDetector),
-                                                           std::move(mlDetector));
+        return std::make_unique<detection::HybridDetector>(
+            std::move(ruleDetector),
+            std::move(mlDetector));
     }
 } // namespace dorm_energy::application::factories

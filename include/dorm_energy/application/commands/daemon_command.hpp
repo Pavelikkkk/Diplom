@@ -1,7 +1,7 @@
 // include/dorm_energy/application/commands/daemon_command.hpp
 #pragma once
 
-#include "dorm_energy/application/cli/command_options.hpp"
+#include "dorm_energy/application/commands/icommand.hpp"
 #include "dorm_energy/application/config/app_config.hpp"
 
 #include "dorm_energy/application/imessage_handler.hpp"
@@ -15,22 +15,23 @@
 
 namespace dorm_energy::application
 {
-    class DaemonCommand
+    class DaemonCommand : public ICommand
     {
     public:
         explicit DaemonCommand(
-            std::shared_ptr<dorm_energy::logging::ILogger> logger, AppConfig config,
-            std::shared_ptr<dorm_energy::mqtt::IMqttConnection> mqtt_connection,
-            std::shared_ptr<dorm_energy::mqtt::IMqttSubscription> mqtt_subscription,
-            std::shared_ptr<dorm_energy::mqtt::IMqttMessageDispatcher> mqtt_dispatcher,
+            std::shared_ptr<dorm_energy::logging::ILogger> logger, const AppConfig &config,
+            std::shared_ptr<dorm_energy::mqtt::IMqttConnection> mqttConnection,
+            std::shared_ptr<dorm_energy::mqtt::IMqttSubscription> mqttSubscription,
+            std::shared_ptr<dorm_energy::mqtt::IMqttMessageDispatcher> mqttDispatcher,
             std::unique_ptr<application::IMessageHandler> message_handler,
             std::shared_ptr<dorm_energy::web::WebServer> web_server);
 
-        int execute(const cli::CommandOptions &options);
+        bool canHandle(const cli::CommandOptions &options) const override;
+        int execute(const cli::CommandOptions &options) override;
 
     private:
         std::shared_ptr<dorm_energy::logging::ILogger> logger_;
-        AppConfig config_;
+        const AppConfig &config_;
 
         std::shared_ptr<dorm_energy::mqtt::IMqttConnection> mqtt_connection_;
         std::shared_ptr<dorm_energy::mqtt::IMqttSubscription> mqtt_subscription_;

@@ -18,10 +18,12 @@ namespace dorm_energy::application
 
     SimulateCommand::SimulateCommand(
         std::shared_ptr<dorm_energy::logging::ILogger> logger,
+        const AppConfig &config,
         std::unique_ptr<dorm_energy::simulation::IDataGenerator> generator,
         std::unique_ptr<dorm_energy::detection::IStateDetector> detector,
         std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository)
         : logger_(std::move(logger)),
+          config_(config),
           generator_(std::move(generator)),
           detector_(std::move(detector)),
           repository_(std::move(repository))
@@ -32,17 +34,22 @@ namespace dorm_energy::application
         }
     }
 
-    int SimulateCommand::execute(
-        const cli::CommandOptions &options)
+    bool SimulateCommand::canHandle(const cli::CommandOptions &options) const
     {
-        logger_->info("Starting simulation for " + std::to_string(options.simulateDays) + " days");
+        return options.type == cli::CommandType::Simulate;
+    }
 
-        if (options.injectAnomalies)
+    int SimulateCommand::execute(
+        const cli::CommandOptions &)
+    {
+        logger_->info("Starting simulation for " + std::to_string(config_.getSimulationDays()) + " days");
+
+        if (config_.getInjectAnomalies())
         {
             logger_->info("Anomaly injection mode enabled");
         }
 
-        core::ReadingsBatch batch = generator_->generate_for_days(options.simulateDays);
+        core::ReadingsBatch batch = generator_->generate_for_days(config_.getSimulationDays());
 
         logger_->info("Generated " + std::to_string(batch.size()) + " sensor readings");
 

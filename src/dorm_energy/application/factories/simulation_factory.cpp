@@ -7,13 +7,17 @@
 
 namespace dorm_energy::application::factories
 {
-    SimulationFactory::SimulationFactory(const AppConfig &config) : config_(config) {}
+    SimulationFactory::SimulationFactory(
+        const AppConfig &config)
+        : config_(config) {}
 
     std::unique_ptr<simulation::IDataGenerator> SimulationFactory::createGenerator(
         std::shared_ptr<storage::IMeasurementRepository> repository) const
     {
         return std::make_unique<simulation::SyntheticDataGenerator>(
-            config_.getRandomSeed(), config_.getInjectAnomalies(), config_.getAnomalyRate(),
+            config_.getRandomSeed(),
+            config_.getInjectAnomalies(),
+            config_.getAnomalyRate(),
             std::move(repository));
     }
 } // namespace dorm_energy::application::factories

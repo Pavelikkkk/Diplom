@@ -8,7 +8,9 @@
 
 namespace dorm_energy::application::factories
 {
-    NotificationFactory::NotificationFactory(const AppConfig &config) : config_(config) {}
+    NotificationFactory::NotificationFactory(
+        const AppConfig &config)
+        : config_(config) {}
 
     std::unique_ptr<INotifier> NotificationFactory::create() const
     {

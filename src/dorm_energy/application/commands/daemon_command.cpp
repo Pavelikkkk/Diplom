@@ -10,17 +10,19 @@ namespace dorm_energy::application
 {
 
     DaemonCommand::DaemonCommand(
-        std::shared_ptr<dorm_energy::logging::ILogger> logger, AppConfig config,
+        std::shared_ptr<dorm_energy::logging::ILogger> logger, const AppConfig &config,
         std::shared_ptr<dorm_energy::mqtt::IMqttConnection> mqtt_connection,
         std::shared_ptr<dorm_energy::mqtt::IMqttSubscription> mqtt_subscription,
         std::shared_ptr<dorm_energy::mqtt::IMqttMessageDispatcher> mqtt_dispatcher,
         std::unique_ptr<application::IMessageHandler> message_handler,
         std::shared_ptr<dorm_energy::web::WebServer> web_server)
-        : config_(std::move(config)), logger_(std::move(logger)),
+        : config_(config),
+          logger_(std::move(logger)),
           mqtt_connection_(std::move(mqtt_connection)),
           mqtt_subscription_(std::move(mqtt_subscription)),
           mqtt_dispatcher_(std::move(mqtt_dispatcher)),
-          message_handler_(std::move(message_handler)), web_server_(std::move(web_server))
+          message_handler_(std::move(message_handler)),
+          web_server_(std::move(web_server))
     {
         if (!logger_ || !mqtt_connection_ || !mqtt_subscription_ || !mqtt_dispatcher_ ||
             !message_handler_ || !web_server_)
@@ -29,8 +31,14 @@ namespace dorm_energy::application
         }
     }
 
+    bool DaemonCommand::canHandle(const cli::CommandOptions &options) const
+    {
+        return options.type == cli::CommandType::Daemon;
+    }
+
     int DaemonCommand::execute(const cli::CommandOptions &options)
     {
+        (void)options;
         logger_->info("Launching Dorm Energy Daemon (MQTT listener)...");
 
         web_server_->start();
@@ -59,8 +67,8 @@ namespace dorm_energy::application
 
         Runtime::init();
 
-        std::string broker = !options.mqttBroker.empty() ? options.mqttBroker : config_.getMqttBroker();
-        std::string topic = !options.mqttTopic.empty() ? options.mqttTopic : config_.getMqttTopic();
+        std::string broker = config_.getMqttBroker();
+        std::string topic = config_.getMqttTopic();
 
         logger_->info(fmt::format("Connecting to MQTT broker: {}", broker));
 
