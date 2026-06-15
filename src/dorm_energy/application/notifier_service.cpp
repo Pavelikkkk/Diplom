@@ -6,7 +6,8 @@ namespace dorm_energy::application
 
     void NotifierService::addNotifier(std::unique_ptr<INotifier> notifier)
     {
-        if (notifier) notifiers_.push_back(std::move(notifier));
+        if (notifier)
+            notifiers_.push_back(std::move(notifier));
     }
 
     bool NotifierService::sendAlert(const core::RoomState &state,
@@ -21,7 +22,7 @@ namespace dorm_energy::application
             if (!notifier->sendAlert(state, info))
                 success = false;
         }
-        
+
         return success;
     }
 

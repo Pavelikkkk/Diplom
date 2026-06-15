@@ -18,7 +18,7 @@ namespace dorm_energy::application::factories
     public:
         explicit AuthFactory(const AppConfig &config);
 
-        std::shared_ptr<::AuthService>
+        std::shared_ptr<AuthService>
         create(std::shared_ptr<storage::IMeasurementRepository> repository) const;
 
     private:

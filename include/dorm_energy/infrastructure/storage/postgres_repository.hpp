@@ -86,6 +86,7 @@ namespace dorm_energy::storage
         bool tryReconnect(int maxAttempts = 3);
 
         void doFlush(const std::vector<core::SensorReading> &readings);
+        void ensureDeviceExists(pqxx::work &txn, const std::string &deviceId);
 
         std::string connectionString_;
         std::unique_ptr<pqxx::connection> connection_;

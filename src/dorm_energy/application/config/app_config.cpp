@@ -124,27 +124,22 @@ namespace
     {
         try
         {
-            const std::filesystem::path currentPath = std::filesystem::current_path();
-            const std::filesystem::path envPath = currentPath / filename;
+            std::filesystem::path currentPath = std::filesystem::current_path();
 
-            if (std::filesystem::exists(envPath))
-                return envPath;
-
-            const std::filesystem::path parentPath = currentPath.parent_path();
-
-            if (currentPath.filename() == "build" || currentPath.filename() == "Debug" ||
-                currentPath.filename() == "Release")
+            while (true)
             {
-                return parentPath / filename;
-            }
+                const std::filesystem::path envPath = currentPath / filename;
 
-            if (parentPath.filename() == "build" || parentPath.filename() == "Debug" ||
-                parentPath.filename() == "Release")
-            {
-                return parentPath.parent_path() / filename;
-            }
+                if (std::filesystem::exists(envPath))
+                    return envPath;
 
-            return envPath;
+                const std::filesystem::path parentPath = currentPath.parent_path();
+
+                if (parentPath == currentPath)
+                    return std::filesystem::current_path() / filename;
+
+                currentPath = parentPath;
+            }
         }
         catch (const std::filesystem::filesystem_error &)
         {

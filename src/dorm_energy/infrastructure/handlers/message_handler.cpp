@@ -1,8 +1,8 @@
 #include "dorm_energy/infrastructure/handlers/message_handler.hpp"
 #include "dorm_energy/core/detection_context.hpp"
 
-#include <iostream>
 #include <fmt/format.h>
+#include <iostream>
 
 namespace dorm_energy::handlers
 {
@@ -12,10 +12,8 @@ namespace dorm_energy::handlers
         std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository,
         std::unique_ptr<dorm_energy::application::INotifier> notifier,
         std::shared_ptr<dorm_energy::detection::RoomStateAggregator> aggregator)
-        : detector_(std::move(detector)),
-          repository_(std::move(repository)),
-          notifier_(std::move(notifier)),
-          aggregator_(std::move(aggregator))
+        : detector_(std::move(detector)), repository_(std::move(repository)),
+          notifier_(std::move(notifier)), aggregator_(std::move(aggregator))
     {
         if (!detector_ || !repository_ || !notifier_ || !aggregator_)
         {
@@ -23,8 +21,7 @@ namespace dorm_energy::handlers
         }
     }
 
-    bool MessageHandler::handle(
-        const core::SensorReading &reading)
+    bool MessageHandler::handle(const core::SensorReading &reading)
     {
         batch_.push_back(reading);
 
@@ -62,15 +59,15 @@ namespace dorm_energy::handlers
             return true;
         }
 
-        repository_->saveAnomaly(reading, anomalyInfo.anomalyType, anomalyInfo.severity, anomalyInfo.description, anomalyInfo.score);
+        repository_->saveAnomaly(reading, anomalyInfo.anomalyType, anomalyInfo.severity,
+                                 anomalyInfo.description, anomalyInfo.score);
 
         notifier_->sendAlert(*state, anomalyInfo);
 
         return true;
     }
 
-    std::size_t MessageHandler::handleBatch(
-        const std::vector<core::SensorReading> &readings)
+    std::size_t MessageHandler::handleBatch(const std::vector<core::SensorReading> &readings)
     {
         if (readings.empty())
             return 0;
@@ -86,10 +83,7 @@ namespace dorm_energy::handlers
         return processed;
     }
 
-    void MessageHandler::flush()
-    {
-        persistCurrentBatch();
-    }
+    void MessageHandler::flush() { persistCurrentBatch(); }
 
     void MessageHandler::persistCurrentBatch()
     {
@@ -98,7 +92,9 @@ namespace dorm_energy::handlers
 
         std::size_t saved = repository_->saveBatch(batch_);
 
-        std::cout << fmt::format("[MessageHandler] Saved {} readings to repository (batch size: {})\n", saved, batch_.size());
+        std::cout << fmt::format(
+            "[MessageHandler] Saved {} readings to repository (batch size: {})\n", saved,
+            batch_.size());
 
         batch_.clear();
     }

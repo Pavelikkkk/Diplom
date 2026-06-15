@@ -1,6 +1,6 @@
 #include "dorm_energy/infrastructure/cli/cli_parser.hpp"
-#include "dorm_energy/application/cli/command_type.hpp"
 #include "dorm_energy/application/cli/command_options.hpp"
+#include "dorm_energy/application/cli/command_type.hpp"
 
 #include <CLI/CLI.hpp>
 #include <iostream>
@@ -8,7 +8,9 @@
 namespace dorm_energy::cli
 {
 
-    CliParser::CliParser() : app_(std::make_unique<CLI::App>("Dorm Energy Monitor - monitoring of energy consumption in the dormitory"))
+    CliParser::CliParser()
+        : app_(std::make_unique<CLI::App>(
+              "Dorm Energy Monitor - monitoring of energy consumption in the dormitory"))
     {
         app_->name("dorm-sim");
         app_->get_formatter()->column_width(25);
@@ -37,7 +39,7 @@ namespace dorm_energy::cli
             ->capture_default_str();
 
         daemon->add_option("--mqtt-topic", "MQTT topic to subscribe")
-            ->default_val("devices/+/power")
+            ->default_val("devices/+/+") // поменять на знач из конфигов
             ->capture_default_str();
 
         app_->add_subcommand("help", "Show help message");

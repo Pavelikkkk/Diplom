@@ -12,14 +12,12 @@ namespace dorm_energy::detection
             maxPowerKw_ = 25.0;
     }
 
-    bool RuleBasedDetector::isAnomaly(
-        const DetectionContext &context) const
+    bool RuleBasedDetector::isAnomaly(const DetectionContext &context) const
     {
         return detect(context).isAnomaly;
     }
 
-    AnomalyInfo RuleBasedDetector::detect(
-        const DetectionContext &context) const
+    AnomalyInfo RuleBasedDetector::detect(const DetectionContext &context) const
     {
         const auto &state = context.current;
 
@@ -77,8 +75,7 @@ namespace dorm_energy::detection
         return info;
     }
 
-    bool RuleBasedDetector::noMotionFor30Minutes(
-        const std::deque<core::RoomState> &history) const
+    bool RuleBasedDetector::noMotionFor30Minutes(const std::deque<core::RoomState> &history) const
     {
         if (history.size() < 2)
             return false;

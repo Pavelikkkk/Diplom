@@ -11,7 +11,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY
     "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 if(MSVC)
-    add_compile_options(/FS)
+    add_compile_options(/FS /utf-8)
 endif()
 
 # if(MSVC)

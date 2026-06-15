@@ -3,8 +3,7 @@
 namespace dorm_energy::detection
 {
 
-    std::optional<core::RoomState> RoomStateAggregator::update(
-        const core::SensorReading &reading)
+    std::optional<core::RoomState> RoomStateAggregator::update(const core::SensorReading &reading)
     {
         auto &state = states_[reading.deviceId];
 
@@ -46,8 +45,8 @@ namespace dorm_energy::detection
         return state;
     }
 
-    const std::deque<core::RoomState> &RoomStateAggregator::getHistory(
-        const std::string &deviceId) const
+    const std::deque<core::RoomState> &
+    RoomStateAggregator::getHistory(const std::string &deviceId) const
     {
         static const std::deque<core::RoomState> emptyHistory;
 
@@ -61,7 +60,8 @@ namespace dorm_energy::detection
         return it->second;
     }
 
-    const std::unordered_map<std::string, core::RoomState> &RoomStateAggregator::getCurrentStates() const
+    const std::unordered_map<std::string, core::RoomState> &
+    RoomStateAggregator::getCurrentStates() const
     {
         return states_;
     }

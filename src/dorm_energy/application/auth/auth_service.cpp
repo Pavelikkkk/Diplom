@@ -2,21 +2,16 @@
 
 #include <stdexcept>
 
-AuthService::AuthService(
-    std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository,
-    std::shared_ptr<IPasswordHasher> passwordHasher,
-    std::shared_ptr<IJwtService> jwtService)
-    : repository_(std::move(repository)),
-      passwordHasher_(std::move(passwordHasher)),
+AuthService::AuthService(std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository,
+                         std::shared_ptr<IPasswordHasher> passwordHasher,
+                         std::shared_ptr<IJwtService> jwtService)
+    : repository_(std::move(repository)), passwordHasher_(std::move(passwordHasher)),
       jwtService_(std::move(jwtService))
 {
 }
 
-int AuthService::registerUser(
-    const std::string &username,
-    const std::string &email,
-    const std::string &password,
-    const std::string &accountType)
+int AuthService::registerUser(const std::string &username, const std::string &email,
+                              const std::string &password, const std::string &accountType)
 {
     if (username.size() < 3)
     {
@@ -52,9 +47,7 @@ int AuthService::registerUser(
     return repository_->createUser(user);
 }
 
-std::string AuthService::loginUser(
-    const std::string &email,
-    const std::string &password)
+std::string AuthService::loginUser(const std::string &email, const std::string &password)
 {
     auto user = repository_->findUserByEmail(email);
 
@@ -73,8 +66,7 @@ std::string AuthService::loginUser(
     return jwtService_->generateToken(user->id, user->email, user->role);
 }
 
-UserClaims AuthService::validateToken(
-    const std::string &token)
+UserClaims AuthService::validateToken(const std::string &token)
 {
     return jwtService_->validateToken(token);
 }

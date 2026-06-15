@@ -1,23 +1,24 @@
 #include "dorm_energy/application/application.hpp"
-#include "dorm_energy/application/config/app_config.hpp"
 #include "dorm_energy/application/cli/command_options.hpp"
+#include "dorm_energy/application/config/app_config.hpp"
 
 #include <iostream>
+#include <memory>
+#include <utility>
 
 namespace dorm_energy::application
 {
-
     Application::Application(
         AppConfig config,
         std::unique_ptr<cli::CliParser> cliParser,
         std::unique_ptr<SimulateCommand> simulateCommand,
         std::unique_ptr<DaemonCommand> daemonCommand,
         std::shared_ptr<storage::IMeasurementRepository> repository)
-        : config_(std::move(config))
-        , cliParser_(std::move(cliParser))
-        , simulateCommand_(std::move(simulateCommand))
-        , daemonCommand_(std::move(daemonCommand))
-        , repository_(std::move(repository))
+        : config_(std::move(config)),
+          cliParser_(std::move(cliParser)),
+          simulateCommand_(std::move(simulateCommand)),
+          daemonCommand_(std::move(daemonCommand)),
+          repository_(std::move(repository))
     {
     }
 

@@ -59,8 +59,7 @@ namespace dorm_energy::application
 
         Runtime::init();
 
-        std::string broker =
-            !options.mqttBroker.empty() ? options.mqttBroker : config_.getMqttBroker();
+        std::string broker = !options.mqttBroker.empty() ? options.mqttBroker : config_.getMqttBroker();
         std::string topic = !options.mqttTopic.empty() ? options.mqttTopic : config_.getMqttTopic();
 
         logger_->info(fmt::format("Connecting to MQTT broker: {}", broker));

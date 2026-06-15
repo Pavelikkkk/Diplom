@@ -13,7 +13,7 @@ namespace dorm_energy::mqtt
     {
         if (payload.empty())
         {
-            std::cerr << "[MessageParser] Empty payload\n";
+            std::cerr << "[MessageParser] Empty payload\n"; //rutime erro
             return std::nullopt;
         }
 
