@@ -6,7 +6,7 @@
 
 namespace dorm_energy::application::factories
 {
-    std::unique_ptr<cli::CliParser> CliFactory::createParser() const
+    std::unique_ptr<cli::ICliParser> CliFactory::createParser() const
     {
         return std::make_unique<cli::CliParser>();
     }

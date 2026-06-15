@@ -6,12 +6,13 @@
 #include <iostream>
 #include <memory>
 #include <utility>
+#include <string_view>
 
 namespace dorm_energy::application
 {
     namespace
     {
-        const char *commandName(cli::CommandType type)
+        std::string_view commandName(cli::CommandType type)
         {
             switch (type)
             {
@@ -27,7 +28,7 @@ namespace dorm_energy::application
             }
         }
 
-        const char *enabled(bool value)
+        std::string_view enabled(bool value)
         {
             return value ? "enabled" : "disabled";
         }
@@ -36,7 +37,7 @@ namespace dorm_energy::application
     Application::Application(
         std::shared_ptr<const AppConfig> config,
         std::shared_ptr<logging::ILogger> logger,
-        std::unique_ptr<cli::CliParser> cliParser,
+        std::unique_ptr<cli::ICliParser> cliParser,
         std::unique_ptr<factories::CommandFactory> commandFactory)
         : config_(std::move(config)),
           logger_(std::move(logger)),

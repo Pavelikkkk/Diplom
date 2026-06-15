@@ -1,4 +1,3 @@
-// include/dorm_energy/application/cli/command_type.hpp
 #pragma once
 
 namespace dorm_energy::cli

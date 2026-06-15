@@ -1,7 +1,7 @@
 // include/dorm_energy/infrastructure/cli/cli_parser.hpp
 #pragma once
 
-#include "dorm_energy/application/cli/command_options.hpp"
+#include "dorm_energy/application/cli/icli_parser.hpp"
 
 #include <CLI/CLI.hpp>
 
@@ -9,20 +9,13 @@
 
 namespace dorm_energy::cli
 {
-
-    enum class ParseResult
-    {
-        Continue,
-        ExitSuccess,
-        ExitError
-    };
-
-    class CliParser
+    
+    class CliParser : public ICliParser
     {
     public:
         CliParser();
 
-        ParseResult parse(int argc, char **argv, CommandOptions &options);
+        ParseResult parse(int argc, char **argv, CommandOptions &options) override;
 
     private:
         void setupCommands();

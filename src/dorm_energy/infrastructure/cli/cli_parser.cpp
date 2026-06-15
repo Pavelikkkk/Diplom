@@ -50,12 +50,12 @@ namespace dorm_energy::cli
         catch (const CLI::ParseError &e)
         {
             app_->exit(e);
-            return ParseResult::ExitError;
+            return ParseResult::ExitFailure;
         }
         catch (const std::exception &e)
         {
             std::cerr << "Argument parsing error: " << e.what() << std::endl;
-            return ParseResult::ExitError;
+            return ParseResult::ExitFailure;
         }
     }
 } // namespace dorm_energy::cli

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "command_type.hpp"
+#include "dorm_energy/application/cli/command_type.hpp"
 
 namespace dorm_energy::cli
 {

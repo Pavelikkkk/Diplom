@@ -1,5 +1,4 @@
 #include "dorm_energy/application/config/app_config.hpp"
-#include "dorm_energy/application/cli/command_options.hpp"
 
 #include <algorithm>
 #include <cctype>
