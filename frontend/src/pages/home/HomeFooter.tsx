@@ -11,35 +11,13 @@ const links = [
 
 export function HomeFooter() {
   return (
-    <footer
-      id="about"
-      className="border-t
-      border-cyan-700/40
-      mt-24
-      py-16"
-    >
-      <div
-        className="grid
-        grid-cols-1
-        md:grid-cols-3
-        gap-12"
-      >
+    <footer id="about" className="mt-16 border-t border-cyan-700/40 py-12 md:mt-20">
+      <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
         <div>
-          <div
-            className="text-4xl
-            mb-4"
-          >
-            вљЎ
+          <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500 text-xl text-slate-950">
+            ⚡
           </div>
-
-          <h3
-            className="text-2xl
-            font-bold
-            mb-3"
-          >
-            Monitoring Platform
-          </h3>
-
+          <h3 className="mb-3 text-2xl font-bold">Monitoring Platform</h3>
           <p className="text-slate-300">
             Smart IoT platform for energy monitoring, anomaly detection and
             analytics.
@@ -47,26 +25,15 @@ export function HomeFooter() {
         </div>
 
         <div>
-          <h4
-            className="text-xl
-            font-semibold
-            mb-4"
-          >
-            Links
-          </h4>
-
-          <div
-            className="space-y-3
-            text-slate-300"
-          >
+          <h4 className="mb-4 text-xl font-semibold">Links</h4>
+          <div className="space-y-3 text-slate-300">
             {links.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 target="_blank"
                 rel="noreferrer"
-                className="block
-                hover:text-cyan-400"
+                className="block hover:text-cyan-400"
               >
                 {link.label}
               </a>
@@ -75,15 +42,8 @@ export function HomeFooter() {
         </div>
       </div>
 
-      <div
-        className="mt-12
-        pt-8
-        border-t
-        border-slate-800
-        text-slate-300
-        text-center"
-      >
-        Monitoring Platform вЂў Version 2.0
+      <div className="mt-10 border-t border-slate-800 pt-6 text-center text-slate-300">
+        Monitoring Platform · Version 2.0
       </div>
     </footer>
   );

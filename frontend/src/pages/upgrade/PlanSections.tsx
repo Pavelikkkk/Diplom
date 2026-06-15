@@ -13,29 +13,19 @@ const personalPlans: Plan[] = [
     price: "Free",
     badge: "Current",
     highlight: true,
-    features: ["вњ… 2 Rooms", "вњ… 5 Devices", "вњ… Anomalies", "вќЊ Analytics"],
+    features: ["\u2705 2 Rooms", "\u2705 5 Devices", "\u2705 Anomalies", "\u274C Analytics"],
   },
   {
     name: "Basic",
     price: "$4.99 / month",
-    features: [
-      "вњ… 10 Rooms",
-      "вњ… 30 Devices",
-      "вњ… Notifications",
-      "вњ… Full History",
-    ],
+    features: ["\u2705 10 Rooms", "\u2705 30 Devices", "\u2705 Notifications", "\u2705 Full History"],
   },
   {
     name: "Pro",
     price: "$9.99 / month",
     badge: "Popular",
     highlight: true,
-    features: [
-      "вњ… 50 Rooms",
-      "вњ… 100 Devices",
-      "вњ… AI Analytics",
-      "вњ… Priority Support",
-    ],
+    features: ["\u2705 50 Rooms", "\u2705 100 Devices", "\u2705 AI Analytics", "\u2705 Priority Support"],
   },
 ];
 
@@ -44,47 +34,33 @@ const businessPlans: Plan[] = [
     name: "Free",
     price: "Free",
     currentWhen: "FREE",
-    features: [
-      "вњ… 1 Building",
-      "вњ… 5 Rooms",
-      "вњ… 10 Devices",
-      "вќЊ Advanced Analytics",
-    ],
+    features: ["\u2705 1 Building", "\u2705 5 Rooms", "\u2705 10 Devices", "\u274C Advanced Analytics"],
   },
   {
     name: "Standard",
     price: "$29.99 / month",
     badge: "Best Choice",
     currentWhen: "STANDARD",
-    features: ["вњ… 5 Buildings", "вњ… 100 Rooms", "вњ… 500 Devices", "вњ… Analytics"],
+    features: ["\u2705 5 Buildings", "\u2705 100 Rooms", "\u2705 500 Devices", "\u2705 Analytics"],
   },
   {
     name: "Enterprise",
     price: "Contact Sales",
     currentWhen: "ENTERPRISE",
     features: [
-      "вњ… Unlimited Buildings",
-      "вњ… Unlimited Rooms",
-      "вњ… Unlimited Devices",
-      "вњ… Team Management",
-      "вњ… Reports",
-      "вњ… Dedicated Support",
+      "\u2705 Unlimited Buildings",
+      "\u2705 Unlimited Rooms",
+      "\u2705 Unlimited Devices",
+      "\u2705 Team Management",
+      "\u2705 Reports",
+      "\u2705 Dedicated Support",
     ],
   },
 ];
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="inline-block
-      px-4
-      py-2
-      rounded-xl
-      bg-cyan-500
-      text-slate-900
-      font-semibold
-      mb-4"
-    >
+    <div className="mb-4 inline-block rounded-lg bg-cyan-500 px-3 py-2 text-sm font-semibold text-slate-950">
       {children}
     </div>
   );
@@ -98,46 +74,16 @@ function PlanCard({ plan, currentPlan }: { plan: Plan; currentPlan: string }) {
     isCurrent || plan.highlight ? "border-cyan-500" : "border-cyan-700/40";
 
   return (
-    <div
-      className={`bg-[#111827]
-      rounded-3xl
-      border
-      ${borderClass}
-      p-5`}
-    >
-      <div
-        className="flex
-        items-center
-        gap-3
-        mb-4"
-      >
-        {plan.badge && (
-          <Badge>
-            {plan.badge}
-          </Badge>
-        )}
-
+    <div className={`rounded-lg border bg-[#111827] p-5 ${borderClass}`}>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        {plan.badge && <Badge>{plan.badge}</Badge>}
         {isCurrent && plan.badge !== "Current" && <Badge>Current</Badge>}
       </div>
 
-      <h3
-        className="text-3xl
-        font-bold"
-      >
-        {plan.name}
-      </h3>
+      <h3 className="text-2xl font-bold sm:text-3xl">{plan.name}</h3>
+      <div className="mt-2 text-cyan-400">{plan.price}</div>
 
-      <div
-        className="text-cyan-400
-        mt-2"
-      >
-        {plan.price}
-      </div>
-
-      <div
-        className="space-y-3
-        mt-8"
-      >
+      <div className="mt-6 space-y-3">
         {plan.features.map((feature) => (
           <div key={feature}>{feature}</div>
         ))}
@@ -157,26 +103,10 @@ function PlanSection({
 }) {
   return (
     <div>
-      <h2
-        className="text-4xl
-        font-bold
-        mb-6"
-      >
-        {title}
-      </h2>
-
-      <div
-        className="grid
-        grid-cols-1
-        lg:grid-cols-3
-        gap-5"
-      >
+      <h2 className="mb-6 text-3xl font-bold sm:text-4xl">{title}</h2>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {plans.map((plan) => (
-          <PlanCard
-            key={plan.name}
-            plan={plan}
-            currentPlan={currentPlan}
-          />
+          <PlanCard key={plan.name} plan={plan} currentPlan={currentPlan} />
         ))}
       </div>
     </div>
@@ -186,7 +116,7 @@ function PlanSection({
 export function PersonalPlans({ currentPlan }: { currentPlan: string }) {
   return (
     <PlanSection
-      title="рџ‘¤ Personal Plans"
+      title={`${"\u{1F464}"} Personal Plans`}
       plans={personalPlans}
       currentPlan={currentPlan}
     />
@@ -196,7 +126,7 @@ export function PersonalPlans({ currentPlan }: { currentPlan: string }) {
 export function BusinessPlans({ currentPlan }: { currentPlan: string }) {
   return (
     <PlanSection
-      title="рџЏў Business Plans"
+      title={`${"\u{1F3E2}"} Business Plans`}
       plans={businessPlans}
       currentPlan={currentPlan}
     />

@@ -6,19 +6,9 @@ type Props = {
 
 export default function DashboardLayout({ children }: Props) {
   return (
-    <div className="min-h-screen
-          bg-[#020617]
-          text-white">
+    <div className="min-h-screen bg-[#020617] text-white">
       <Navbar />
-
-      <main
-        className="max-w-[1600px]
-              mx-auto
-              px-6
-              md:px-10
-              lg:px-12
-              pb-10"
-      >
+      <main className="mx-auto w-full max-w-[1760px] px-4 pb-10 sm:px-6 lg:px-10 2xl:px-16">
         {children}
       </main>
     </div>

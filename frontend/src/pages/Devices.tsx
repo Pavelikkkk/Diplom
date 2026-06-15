@@ -9,24 +9,24 @@ type Device = {
   deviceModel: string;
   firmwareVersion: string;
   roomName: string;
+  roomId: number;
   isOnline: boolean;
   lastSeenAt: string;
 };
 
+const deviceIcon = "\u{1F4E1}";
+const greenDot = "\u25CF";
+const arrow = "\u2192";
+
 export default function Devices() {
   const [devices, setDevices] = useState<Device[]>([]);
-
   const [search, setSearch] = useState("");
-
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "online" | "offline"
-  >("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
 
   useEffect(() => {
     async function loadDevices() {
       try {
         const data = await getUserDevices();
-
         setDevices(data);
       } catch (err) {
         console.error(err);
@@ -37,10 +37,8 @@ export default function Devices() {
   }, []);
 
   const filteredDevices = devices.filter((device) => {
-    const matchesSearch = device.deviceName
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
+    const haystack = `${device.deviceName} ${device.deviceId} ${device.roomName}`.toLowerCase();
+    const matchesSearch = haystack.includes(search.toLowerCase());
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "online" && device.isOnline) ||
@@ -50,195 +48,106 @@ export default function Devices() {
   });
 
   const onlineCount = devices.filter((d) => d.isOnline).length;
-
   const offlineCount = devices.filter((d) => !d.isOnline).length;
 
   return (
-    <div className="space-y-8">
-      {/* HEADER */}
-
+    <div className="space-y-8 2xl:space-y-10">
       <div>
-        <h1 className="text-5xl
-              font-bold
-              mb-3">Devices</h1>
-
-        <p className="text-slate-300">Monitor and manage IoT devices.</p>
+        <h1 className="mb-2 text-4xl font-bold md:text-5xl 2xl:text-6xl">
+          Devices
+        </h1>
+        <p className="text-lg text-slate-300 2xl:text-xl">
+          Monitor and manage IoT devices.
+        </p>
       </div>
 
-      {/* STATS */}
-
-      <div
-        className="grid
-              grid-cols-1
-              md:grid-cols-3
-              gap-4"
-      >
-        <div
-          className="bg-[#111827]
-                rounded-2xl
-                p-5"
-        >
-          <p className="text-slate-300">📡 Devices</p>
-
-          <h2 className="text-3xl
-                font-bold">{devices.length}</h2>
-        </div>
-
-        <div
-          className="bg-[#111827]
-                rounded-2xl
-                p-5"
-        >
-          <p className="text-slate-300">🟢 Online</p>
-
-          <h2 className="text-3xl
-                font-bold
-                text-emerald-400">{onlineCount}</h2>
-        </div>
-
-        <div
-          className="bg-[#111827]
-                rounded-2xl
-                p-5"
-        >
-          <p className="text-slate-300">🔴 Offline</p>
-
-          <h2 className="text-3xl
-                font-bold
-                text-rose-400">{offlineCount}</h2>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 2xl:gap-6">
+        <Stat icon={deviceIcon} label="Devices" value={devices.length} />
+        <Stat label="Online" value={onlineCount} accent="text-emerald-400" />
+        <Stat label="Offline" value={offlineCount} accent="text-rose-400" />
       </div>
-
-      {/* SEARCH */}
 
       <input
         type="text"
         placeholder="Search devices..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full
-              bg-[#111827]
-              border
-              border-cyan-700/40
-              rounded-2xl
-              p-5
-              outline-none
-              focus:border-orange-300"
+        className="w-full rounded-lg border border-cyan-700/40 bg-[#111827] p-4 text-base outline-none focus:border-cyan-400 md:p-5 md:text-lg"
       />
 
-      {/* FILTERS */}
-
-      <div className="flex
-            gap-3">
-        <button
-          onClick={() => setStatusFilter("all")}
-          className={`
-            px-5
-            py-2
-            rounded-2xl
-            ${
-              statusFilter === "all"
-                ? "text-cyan-400 text-slate-900"
-                : "bg-[#111827]"
-            }
-          `}
-        >
-          All
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("online")}
-          className={`
-            px-5
-            py-2
-            rounded-2xl
-            ${
-              statusFilter === "online"
-                ? "bg-green-400 text-slate-900"
-                : "bg-[#111827]"
-            }
-          `}
-        >
-          Online
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("offline")}
-          className={`
-            px-5
-            py-2
-            rounded-2xl
-            ${
-              statusFilter === "offline"
-                ? "bg-red-400 text-slate-900"
-                : "bg-[#111827]"
-            }
-          `}
-        >
-          Offline
-        </button>
+      <div className="flex flex-wrap gap-3">
+        {(["all", "online", "offline"] as const).map((value) => (
+          <button
+            key={value}
+            onClick={() => setStatusFilter(value)}
+            className={`rounded-lg px-5 py-2 capitalize transition ${
+              statusFilter === value
+                ? "bg-cyan-500 text-slate-950"
+                : "bg-[#111827] text-slate-200 hover:bg-slate-800"
+            }`}
+          >
+            {value}
+          </button>
+        ))}
       </div>
 
-      {/* DEVICES */}
-
-      <div
-        className="grid
-              grid-cols-1
-              md:grid-cols-2
-              xl:grid-cols-3
-              gap-5"
-      >
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:gap-6">
         {filteredDevices.map((device) => (
           <Link
             key={device.deviceId}
             to={`/devices/${device.deviceId}`}
-            className="bg-[#111827]
-                  border
-                  border-cyan-700/40
-                  rounded-2xl
-                  p-5
-                  hover:border-cyan-400
-                  hover:-translate-y-1
-                  transition"
+            className="rounded-lg border border-cyan-700/40 bg-[#111827] p-5 transition hover:-translate-y-1 hover:border-cyan-400 2xl:p-6"
           >
-            <div className="flex
-                  justify-between
-                  mb-4">
-              <h2
-                className="text-xl
-                      font-bold"
-              >
-                {device.deviceName}
-              </h2>
-
-              <span
-                className={
-                  device.isOnline ? "text-emerald-400" : "text-rose-400"
-                }
-              >
-                ●
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <div className="mb-3 text-4xl 2xl:text-5xl">{deviceIcon}</div>
+                <h2 className="break-words text-2xl font-bold text-cyan-400 2xl:text-3xl">
+                  {device.deviceName}
+                </h2>
+                <p className="mt-1 break-words text-sm text-slate-400">
+                  {device.deviceId}
+                </p>
+              </div>
+              <span className={device.isOnline ? "text-emerald-400" : "text-rose-400"}>
+                {greenDot}
               </span>
             </div>
 
-            <p className="text-slate-300
-                  mb-3">{device.roomName}</p>
+            <p className="mb-3 text-slate-300">{device.roomName || "No room"}</p>
 
-            <div className="space-y-2">
-              <div>📡 {device.deviceModel}</div>
-
-              <div>⚙️ {device.firmwareVersion}</div>
+            <div className="space-y-2 text-base 2xl:text-lg">
+              <div>{device.deviceModel}</div>
+              <div>{device.firmwareVersion}</div>
             </div>
 
-            <div
-              className="mt-5
-                    text-cyan-400
-                    font-semibold"
-            >
-              View Device →
+            <div className="mt-6 font-semibold text-cyan-400">
+              View Device {arrow}
             </div>
           </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  accent = "text-white",
+}: {
+  icon?: string;
+  label: string;
+  value: number;
+  accent?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-cyan-700/40 bg-[#111827] p-5 2xl:p-6">
+      <p className="text-slate-300">
+        {icon && <span className="mr-2">{icon}</span>}
+        {label}
+      </p>
+      <h2 className={`text-3xl font-bold 2xl:text-4xl ${accent}`}>{value}</h2>
     </div>
   );
 }
