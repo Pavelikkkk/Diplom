@@ -17,6 +17,7 @@
 #include <mutex>
 #include <pqxx/pqxx>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace dorm_energy::storage
@@ -86,6 +87,9 @@ namespace dorm_energy::storage
         bool tryReconnect(int maxAttempts = 3);
 
         void doFlush(const std::vector<core::SensorReading> &readings);
+        std::vector<std::string>
+        getUnknownDeviceIds(const std::vector<core::SensorReading> &readings);
+        void markDevicesKnown(const std::vector<std::string> &deviceIds);
         void ensureDeviceExists(pqxx::work &txn, const std::string &deviceId);
 
         std::string connectionString_;
@@ -95,5 +99,7 @@ namespace dorm_energy::storage
         const std::size_t maxBufferSize_;
 
         std::mutex bufferMutex_; // thread-safety для будущего MQTT
+        std::mutex deviceCacheMutex_;
+        std::unordered_set<std::string> knownDeviceIds_;
     };
 } // namespace dorm_energy::storage

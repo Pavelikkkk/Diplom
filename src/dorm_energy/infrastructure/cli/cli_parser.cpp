@@ -9,10 +9,10 @@ namespace dorm_energy::cli
 {
     CliParser::CliParser()
         : app_(std::make_unique<CLI::App>(
-              "Dorm Energy Monitor - monitoring of energy consumption in the dormitory"))
+              "System of smart monitoring"))
     {
-        app_->name("dorm-sim");
-        app_->get_formatter()->column_width(25);
+        app_->name("SoSM");                      // поменять потом в exec cmake
+        app_->get_formatter()->column_width(25); //
         setupCommands();
     }
 
@@ -33,19 +33,19 @@ namespace dorm_energy::cli
             if (app_->get_subcommand("simulate")->parsed())
             {
                 options.type = CommandType::Simulate;
+                return ParseResult::Continue;
             }
             else if (app_->get_subcommand("daemon")->parsed())
             {
                 options.type = CommandType::Daemon;
+                return ParseResult::Continue;
             }
             else if (app_->get_subcommand("help")->parsed() || !app_->get_subcommand()->parsed())
             {
-                options.type = CommandType::Help;
-                std::cout << app_->help() << std::endl;
+                options.type = CommandType::Help; // убрать
+                std::cout << app_->help() << '\n';
                 return ParseResult::ExitSuccess;
             }
-
-            return ParseResult::Continue;
         }
         catch (const CLI::ParseError &e)
         {
@@ -54,7 +54,7 @@ namespace dorm_energy::cli
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Argument parsing error: " << e.what() << std::endl;
+            std::cerr << "Argument parsing error: " << e.what() << std::endl; //
             return ParseResult::ExitFailure;
         }
     }

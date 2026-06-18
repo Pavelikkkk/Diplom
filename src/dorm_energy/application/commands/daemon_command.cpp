@@ -68,11 +68,21 @@ namespace dorm_energy::application
         Runtime::init();
 
         std::string broker = config_.getMqttBroker();
+        std::string clientId = config_.getMqttClientId();
         std::string topic = config_.getMqttTopic();
+        std::string username = config_.getMqttUsername();
 
-        logger_->info(fmt::format("Connecting to MQTT broker: {}", broker));
+        logger_->info(fmt::format("Connecting to MQTT broker: {} as {} | auth: {} | tls verify: {}",
+                                  broker, clientId,
+                                  username.empty() ? "disabled" : "enabled",
+                                  config_.getMqttTlsVerify() ? "enabled" : "disabled"));
 
-        bool connected = mqtt_connection_->connect(broker, "dorm-energy-daemon");
+        bool connected = mqtt_connection_->connect(
+            broker,
+            clientId,
+            username,
+            config_.getMqttPassword(),
+            config_.getMqttTlsVerify());
         if (!connected)
         {
             logger_->error("Failed to connect to MQTT broker");

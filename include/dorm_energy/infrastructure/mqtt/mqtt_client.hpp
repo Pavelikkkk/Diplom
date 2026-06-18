@@ -22,7 +22,10 @@ namespace dorm_energy::mqtt
         ~MqttClient() override;
 
         bool connect(const std::string &broker = "tcp://127.0.0.1:1883",
-                     const std::string &clientId = "dorm-energy") override;
+                     const std::string &clientId = "dorm-energy",
+                     const std::string &username = "",
+                     const std::string &password = "",
+                     bool tlsVerify = false) override;
 
         bool isConnected() const override;
 

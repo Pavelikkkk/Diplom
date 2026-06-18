@@ -6,7 +6,9 @@
 #include <fmt/format.h>
 #include <iostream>
 #include <pqxx/params>
+#include <pqxx/stream_to>
 #include <thread>
+#include <unordered_set>
 
 namespace dorm_energy::storage
 {
@@ -71,26 +73,6 @@ namespace dorm_energy::storage
         if (readings.empty())
             return 0;
 
-        try
-        {
-            if (!connection_ || !connection_->is_open())
-            {
-                if (!tryReconnect(3))
-                    throw std::runtime_error("Cannot reconnect to database");
-            }
-
-            pqxx::work txn{*connection_};
-            for (const auto &reading : readings)
-            {
-                ensureDeviceExists(txn, reading.deviceId);
-            }
-            txn.commit();
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "[Postgres] Ensure device error: " << e.what() << std::endl;
-        }
-
         {
             std::lock_guard<std::mutex> lock(bufferMutex_);
             buffer_.insert(buffer_.end(), readings.begin(), readings.end());
@@ -118,6 +100,42 @@ namespace dorm_energy::storage
         doFlush(toFlush);
     }
 
+    std::vector<std::string> PostgresMeasurementRepository::getUnknownDeviceIds(
+        const std::vector<core::SensorReading> &readings)
+    {
+        std::vector<std::string> deviceIds;
+        std::unordered_set<std::string> seenInBatch;
+
+        {
+            std::lock_guard<std::mutex> lock(deviceCacheMutex_);
+
+            for (const auto &reading : readings)
+            {
+                if (knownDeviceIds_.contains(reading.deviceId) ||
+                    seenInBatch.contains(reading.deviceId))
+                {
+                    continue;
+                }
+
+                seenInBatch.insert(reading.deviceId);
+                deviceIds.push_back(reading.deviceId);
+            }
+        }
+
+        return deviceIds;
+    }
+
+    void PostgresMeasurementRepository::markDevicesKnown(
+        const std::vector<std::string> &deviceIds)
+    {
+        std::lock_guard<std::mutex> lock(deviceCacheMutex_);
+
+        for (const auto &deviceId : deviceIds)
+        {
+            knownDeviceIds_.insert(deviceId);
+        }
+    }
+
     void PostgresMeasurementRepository::doFlush(const std::vector<core::SensorReading> &readings)
     {
         if (readings.empty())
@@ -132,41 +150,54 @@ namespace dorm_energy::storage
             }
 
             pqxx::work txn{*connection_};
-            std::size_t saved = 0;
-            std::size_t skipped = 0;
+            const auto unknownDeviceIds = getUnknownDeviceIds(readings);
 
-            for (const auto &r : readings)
+            for (const auto &deviceId : unknownDeviceIds)
             {
-                std::string ts = fmt::format("{:%Y-%m-%d %H:%M:%S%z}", r.timestamp);
-
-                std::optional<bool> boolVal = r.boolValue;
-
-                try
-                {
-                    ensureDeviceExists(txn, r.deviceId);
-
-                    txn.exec(
-                        R"(INSERT INTO sensor_readings 
-                        (recorded_at, device_id, sensor_type, numeric_value, bool_value, unit)
-                       VALUES ($1::timestamptz, $2, $3, $4, $5, $6)
-                       ON CONFLICT (recorded_at, device_id, sensor_type) 
-                       DO NOTHING)",
-                        pqxx::params{ts, r.deviceId, r.sensorType, r.value, boolVal, r.unit});
-
-                    ++saved;
-                }
-                catch (const pqxx::sql_error &e)
-                {
-                    ++skipped;
-                    std::cerr << "[Postgres] Skipped one reading due to: " << e.what() << std::endl;
-                }
+                ensureDeviceExists(txn, deviceId);
             }
 
-            txn.commit();
+            {
+                txn.exec(
+                    R"(CREATE TEMP TABLE staging_sensor_readings
+                    (
+                        recorded_at TIMESTAMPTZ NOT NULL,
+                        device_id TEXT NOT NULL,
+                        sensor_type TEXT NOT NULL,
+                        numeric_value DOUBLE PRECISION,
+                        bool_value BOOLEAN,
+                        unit TEXT
+                    ) ON COMMIT DROP)");
 
-            if (saved > 0)
-                std::cout << fmt::format("[Postgres] Flushed {} readings (skipped {} duplicates)\n",
-                                         saved, skipped);
+                const std::vector<std::string> columns{
+                    "recorded_at", "device_id", "sensor_type", "numeric_value", "bool_value",
+                    "unit"};
+                auto stream = pqxx::stream_to::table(txn, "staging_sensor_readings", columns);
+
+                for (const auto &r : readings)
+                {
+                    const std::string ts = fmt::format("{:%Y-%m-%d %H:%M:%S%z}", r.timestamp);
+                    const std::optional<bool> boolVal = r.boolValue;
+
+                    stream.write_values(ts, r.deviceId, r.sensorType, r.value, boolVal, r.unit);
+                }
+
+                stream.complete();
+            }
+
+            const auto insertResult = txn.exec(
+                R"(INSERT INTO sensor_readings
+                    (recorded_at, device_id, sensor_type, numeric_value, bool_value, unit)
+                   SELECT recorded_at, device_id, sensor_type, numeric_value, bool_value, unit
+                   FROM staging_sensor_readings
+                   ON CONFLICT (recorded_at, device_id, sensor_type)
+                   DO NOTHING)");
+
+            txn.commit();
+            markDevicesKnown(unknownDeviceIds);
+
+            std::cout << fmt::format("[Postgres] Flushed {} readings ({} inserted)\n",
+                                     readings.size(), insertResult.affected_rows());
         }
         catch (const std::exception &e)
         {

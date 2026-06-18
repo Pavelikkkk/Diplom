@@ -30,6 +30,9 @@ namespace dorm_energy::application
         const std::string &getMqttBroker() const { return mqttBroker_; }
         const std::string &getMqttClientId() const { return mqttClientId_; }
         const std::string &getMqttTopic() const { return mqttTopic_; }
+        const std::string &getMqttUsername() const { return mqttUsername_; }
+        const std::string &getMqttPassword() const { return mqttPassword_; }
+        bool getMqttTlsVerify() const { return mqttTlsVerify_; }
 
         bool isTelegramEnabled() const { return telegramEnabled_; }
 
@@ -71,6 +74,9 @@ namespace dorm_energy::application
         std::string mqttBroker_{};
         std::string mqttClientId_{"dorm-energy"};
         std::string mqttTopic_{"devices/+/power"};
+        std::string mqttUsername_{};
+        std::string mqttPassword_{};
+        bool mqttTlsVerify_{false};
 
         bool telegramEnabled_{false};
 

@@ -89,8 +89,11 @@ namespace dorm_energy::application
 
         if (options.type == cli::CommandType::Daemon)
         {
-            logger_->info(fmt::format("Config MQTT broker: {} | client id: {} | topic: {}",
-                                      config_->getMqttBroker(), config_->getMqttClientId(), config_->getMqttTopic()));
+            logger_->info(fmt::format("Config MQTT broker: {} | client id: {} | topic: {} | auth: {} | tls verify: {}",
+                                      config_->getMqttBroker(), config_->getMqttClientId(),
+                                      config_->getMqttTopic(),
+                                      enabled(!config_->getMqttUsername().empty()),
+                                      enabled(config_->getMqttTlsVerify())));
 
             logger_->info(fmt::format("Config Telegram: {} | chat id: {}",
                                       enabled(config_->isTelegramEnabled()), config_->getTelegramChatId()));

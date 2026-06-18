@@ -220,6 +220,12 @@ namespace dorm_energy::application
                 config.mqttClientId_ = value;
             else if (key == "MQTT_TOPIC")
                 config.mqttTopic_ = value;
+            else if (key == "MQTT_USERNAME")
+                config.mqttUsername_ = value;
+            else if (key == "MQTT_PASSWORD")
+                config.mqttPassword_ = value;
+            else if (key == "MQTT_TLS_VERIFY")
+                config.mqttTlsVerify_ = parseBool(value);
             else if (key == "TELEGRAM_ENABLED")
                 config.telegramEnabled_ = parseBool(value);
             else if (key == "TELEGRAM_BOT_TOKEN")
@@ -276,6 +282,12 @@ namespace dorm_energy::application
             mqttClientId_ = val;
         if (const char *val = std::getenv("MQTT_TOPIC"))
             mqttTopic_ = val;
+        if (const char *val = std::getenv("MQTT_USERNAME"))
+            mqttUsername_ = val;
+        if (const char *val = std::getenv("MQTT_PASSWORD"))
+            mqttPassword_ = val;
+        if (const char *val = std::getenv("MQTT_TLS_VERIFY"))
+            mqttTlsVerify_ = parseBool(val);
 
         if (const char *val = std::getenv("TELEGRAM_ENABLED"))
             telegramEnabled_ = parseBool(val);
@@ -338,9 +350,11 @@ namespace dorm_energy::application
     {
         // TODO: на содиум поменять
         dbPassword_.clear();
+        mqttPassword_.clear();
         telegramBotToken_.clear();
 
         dbPassword_.shrink_to_fit();
+        mqttPassword_.shrink_to_fit();
         telegramBotToken_.shrink_to_fit();
     }
 

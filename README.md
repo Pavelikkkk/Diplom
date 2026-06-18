@@ -22,20 +22,4 @@
 - [ADR-007](./docs/adr/0007-telegram-bot-for-notifications.md) — Система оповещения
 - [ADR-008](./docs/adr/0008-onnx-runtime-for-ml-inference.md) — Инференс ML-моделей
 
-## Как использовать
 
-```bash
-# Сборка проекта
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build .
-
-# Запуск демона 
-.dorm-sim daemon
-
-# Запуск симуляции
-./dorm-sim simulate --days 30 --anomalies --verbose
-
-# Просмотр помощи
-./dorm-sim --help
-./dorm-sim simulate --help

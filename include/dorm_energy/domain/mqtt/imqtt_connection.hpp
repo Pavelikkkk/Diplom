@@ -29,7 +29,10 @@ namespace dorm_energy::mqtt
          * @param client_id идентификатор клиента
          */
         virtual bool connect(const std::string &broker = "tcp://127.0.0.1:1883",
-                             const std::string &client_id = "dorm-energy") = 0;
+                             const std::string &client_id = "dorm-energy",
+                             const std::string &username = "",
+                             const std::string &password = "",
+                             bool tlsVerify = false) = 0;
 
         virtual bool isConnected() const = 0;
 

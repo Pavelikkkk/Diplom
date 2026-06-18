@@ -8,6 +8,13 @@
 
 namespace dorm_energy::mqtt
 {
+    namespace
+    {
+        bool usesTls(const std::string &broker)
+        {
+            return broker.rfind("ssl://", 0) == 0 || broker.rfind("wss://", 0) == 0;
+        }
+    }
 
     class MqttClient::Impl
     {
@@ -15,7 +22,9 @@ namespace dorm_energy::mqtt
         Impl();
         ~Impl();
 
-        bool connect(const std::string &broker, const std::string &clientId);
+        bool connect(const std::string &broker, const std::string &clientId,
+                     const std::string &username, const std::string &password,
+                     bool tlsVerify);
         bool isConnected() const;
         bool start();
         void stop();
@@ -46,6 +55,9 @@ namespace dorm_energy::mqtt
 
         std::string broker_;
         std::string clientId_;
+        std::string username_;
+        std::string password_;
+        bool tlsVerify_{false};
 
         std::atomic<bool> connected_{false};
         std::atomic<bool> running_{false};
@@ -72,11 +84,16 @@ namespace dorm_energy::mqtt
         stop();
     }
 
-    bool MqttClient::Impl::connect(const std::string &broker, const std::string &clientId)
+    bool MqttClient::Impl::connect(const std::string &broker, const std::string &clientId,
+                                   const std::string &username, const std::string &password,
+                                   bool tlsVerify)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         broker_ = broker;
         clientId_ = clientId;
+        username_ = username;
+        password_ = password;
+        tlsVerify_ = tlsVerify;
 
         if (currentMode_ == MqttMode::Simulation)
         {
@@ -89,10 +106,22 @@ namespace dorm_energy::mqtt
         client_ = std::make_unique<::mqtt::async_client>(broker, clientId);
         client_->set_callback(*callbackHandler_);
 
+        connOpts_ = ::mqtt::connect_options{};
         connOpts_.set_keep_alive_interval(20);
         connOpts_.set_clean_session(true);
         connOpts_.set_automatic_reconnect(true);
         connOpts_.set_connect_timeout(10);
+        if (usesTls(broker_))
+        {
+            ::mqtt::ssl_options sslOpts;
+            sslOpts.set_enable_server_cert_auth(tlsVerify_);
+            connOpts_.set_ssl(sslOpts);
+        }
+        if (!username_.empty())
+        {
+            connOpts_.set_user_name(username_);
+            connOpts_.set_password(password_);
+        }
 
         try
         {
@@ -200,7 +229,7 @@ namespace dorm_energy::mqtt
             std::thread([this]()
                         {
             std::this_thread::sleep_for(std::chrono::seconds(3));
-            parent_.connect(parent_.broker_, parent_.clientId_); }).detach();
+            parent_.connect(parent_.broker_, parent_.clientId_, parent_.username_, parent_.password_, parent_.tlsVerify_); }).detach();
         }
     }
 
@@ -227,9 +256,11 @@ namespace dorm_energy::mqtt
     MqttClient::MqttClient() : pimpl_(std::make_unique<Impl>()) {}
     MqttClient::~MqttClient() = default;
 
-    bool MqttClient::connect(const std::string &broker, const std::string &clientId)
+    bool MqttClient::connect(const std::string &broker, const std::string &clientId,
+                             const std::string &username, const std::string &password,
+                             bool tlsVerify)
     {
-        return pimpl_->connect(broker, clientId);
+        return pimpl_->connect(broker, clientId, username, password, tlsVerify);
     }
 
     bool MqttClient::isConnected() const { return pimpl_->isConnected(); }

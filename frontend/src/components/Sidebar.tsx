@@ -49,7 +49,7 @@ export default function Sidebar() {
                 <span className="inline-flex h-10 w-10 items-center justify-center text-3xl text-orange-400">
                   {"\u26A1"}
                 </span>
-                <span className="text-2xl font-bold">SMATI</span>
+                <span className="text-2xl font-bold">SoSM</span>
               </Link>
 
               <button
