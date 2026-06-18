@@ -26,7 +26,6 @@ namespace dorm_energy::simulation
         struct RoomState
         {
             bool motion;
-
             double power;
             double light;
 

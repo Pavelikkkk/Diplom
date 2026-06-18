@@ -1,40 +1,42 @@
 // include/dorm_energy/domain/logging/ilogger.hpp
 #pragma once
 
+#include "dorm_energy/domain/logging/log_level.hpp"
+
 #include <string>
 
 namespace dorm_energy::logging
 {
-    /**
-     * @brief Уровни логирования
-
-     */
-    enum class LogLevel
-    {
-        Debug,
-        Info,
-        Warn,
-        Error,
-        Critical
-    };
-    /**
-     * @brief Интерфейс для логирования в проекте
-     */
     class ILogger
     {
     public:
         virtual ~ILogger() = default;
 
-        /**
-         * @brief Основной метод логирования
-         */
         virtual void log(LogLevel level, const std::string &message) = 0;
 
-        void debug(const std::string &msg) { log(LogLevel::Debug, msg); }
-        void info(const std::string &msg) { log(LogLevel::Info, msg); }
-        void warn(const std::string &msg) { log(LogLevel::Warn, msg); }
-        void error(const std::string &msg) { log(LogLevel::Error, msg); }
-        void critical(const std::string &msg) { log(LogLevel::Critical, msg); }
-    };
+        void debug(const std::string &message)
+        {
+            log(LogLevel::Debug, message);
+        }
 
+        void info(const std::string &message)
+        {
+            log(LogLevel::Info, message);
+        }
+
+        void warn(const std::string &message)
+        {
+            log(LogLevel::Warn, message);
+        }
+
+        void error(const std::string &message)
+        {
+            log(LogLevel::Error, message);
+        }
+
+        void critical(const std::string &message)
+        {
+            log(LogLevel::Critical, message);
+        }
+    };
 } // namespace dorm_energy::logging

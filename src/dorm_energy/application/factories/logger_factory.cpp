@@ -7,7 +7,7 @@
 namespace dorm_energy::application::factories
 {
     LoggerFactory::LoggerFactory(
-        const AppConfig &config) 
+        const AppConfig &config)
         : config_(config) {}
 
     std::shared_ptr<logging::ILogger> LoggerFactory::create()

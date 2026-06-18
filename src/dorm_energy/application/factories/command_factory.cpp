@@ -3,7 +3,6 @@
 #include "dorm_energy/application/cli/command_type.hpp"
 #include "dorm_energy/application/commands/daemon_command.hpp"
 #include "dorm_energy/application/commands/simulate_command.hpp"
-#include "dorm_energy/application/inotifier.hpp"
 
 #include <memory>
 #include <utility>
