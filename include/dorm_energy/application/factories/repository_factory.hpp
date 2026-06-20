@@ -7,14 +7,15 @@
 namespace dorm_energy::storage
 {
     class IMeasurementRepository;
-}
+} // namespace dorm_energy::storage
 
 namespace dorm_energy::application::factories
 {
     class RepositoryFactory
     {
     public:
-        explicit RepositoryFactory(const AppConfig &config);
+        explicit RepositoryFactory(
+            const AppConfig &config);
 
         std::shared_ptr<storage::IMeasurementRepository> create();
 

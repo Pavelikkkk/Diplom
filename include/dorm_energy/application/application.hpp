@@ -12,17 +12,19 @@ namespace dorm_energy::application
     class Application
     {
     public:
-        explicit Application(std::shared_ptr<const AppConfig> config,
-                             std::shared_ptr<logging::ILogger> logger,
-                             std::unique_ptr<cli::ICliParser> cliParser,
-                             std::unique_ptr<factories::CommandFactory> commandFactory);
+        explicit Application(
+            std::shared_ptr<const AppConfig> config,
+            std::shared_ptr<logging::ILogger> logger,
+            std::unique_ptr<cli::ICliParser> cliParser,
+            std::unique_ptr<factories::CommandFactory> commandFactory);
 
         ~Application() = default;
 
         int run(int argc, char **argv);
 
     private:
-        void logEffectiveConfig(const cli::CommandOptions &options) const;
+        void logEffectiveConfig( // лучше как хелпер в cpp 
+            const cli::ParsedCommand &options) const;
 
         std::shared_ptr<const AppConfig> config_;
         std::shared_ptr<logging::ILogger> logger_;

@@ -15,10 +15,12 @@ namespace dorm_energy::application::factories
 
     std::unique_ptr<detection::IStateDetector> DetectionFactory::create() const
     {
-        auto ruleDetector = std::make_unique<detection::RuleBasedDetector>(25.0);
+        auto ruleDetector = std::make_unique<detection::RuleBasedDetector>(
+            config_.getRuleBasedDetectorConfig());
 
-        // TODO: move to config.
-        auto mlDetector = std::make_unique<detection::OnnxDetector>("../../ml/models/anomaly_autoencoder.onnx");
+        auto mlDetector = std::make_unique<detection::OnnxDetector>(
+            config_.getOnnxModelPath(),
+            config_.getOnnxModelConfig());
 
         return std::make_unique<detection::HybridDetector>(
             std::move(ruleDetector),

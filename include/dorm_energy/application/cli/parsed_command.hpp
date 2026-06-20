@@ -4,7 +4,7 @@
 
 namespace dorm_energy::cli
 {
-    struct CommandOptions
+    struct ParsedCommand // зачем 
     {
         CommandType type{CommandType::Unknown};
     };

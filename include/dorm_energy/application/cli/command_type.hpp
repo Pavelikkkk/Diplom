@@ -6,7 +6,7 @@ namespace dorm_energy::cli
     enum class CommandType
     {
         Unknown,
-        Help,
+        Help, // поменять название 
         Simulate,
         Daemon
     };

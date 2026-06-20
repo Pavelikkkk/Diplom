@@ -1,6 +1,5 @@
 #include "dorm_energy/infrastructure/detection/anomaly_tracker.hpp"
-
-#include <vector>
+#include "dorm_energy/core/string_utils.hpp"
 
 namespace dorm_energy::detection
 {
@@ -16,35 +15,25 @@ namespace dorm_energy::detection
         const core::RoomState &state,
         const AnomalyInfo &anomaly)
     {
-
-        auto key = makeKey(state, anomaly);
-        if (active_.contains(key))
-        {
-            return false;
-        }
-
-        active_.insert(key);
-
-        return true;
+        const auto [_, inserted] = active_.insert(makeKey(state, anomaly));
+        return inserted;
     }
 
     void AnomalyTracker::resolveRoom(
         const std::string &deviceId)
     {
+        const std::string prefix = deviceId + ":";
 
-        std::vector<std::string> remove;
-        for (const auto &key : active_)
+        for (auto it = active_.begin(); it != active_.end();)
         {
-            if (key.starts_with(deviceId + ":"))
+            if (core::startsWith(*it, prefix))
             {
-                remove.push_back(key);
+                it = active_.erase(it);
+            }
+            else
+            {
+                ++it;
             }
         }
-
-        for (const auto &key : remove)
-        {
-            active_.erase(key);
-        }
     }
-
-}
+} // namespace dorm_energy::detection

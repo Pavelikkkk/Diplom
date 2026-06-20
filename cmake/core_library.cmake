@@ -3,9 +3,10 @@
 # ============================================
 
 add_library(dorm_energy_core STATIC
-    # Core
-    src/dorm_energy/core/measurement.cpp
     src/dorm_energy/core/alert_severity.cpp
+    src/dorm_energy/core/time_utils.cpp
+    src/dorm_energy/core/csv_utils.cpp
+    src/dorm_energy/domain/logging/log_level.cpp
 
     # Infrastructure
     src/dorm_energy/infrastructure/logging/spdlog_logger.cpp
@@ -13,7 +14,6 @@ add_library(dorm_energy_core STATIC
     src/dorm_energy/infrastructure/notifier/console_notifier.cpp
     src/dorm_energy/infrastructure/notifier/telegram_config.cpp
     src/dorm_energy/infrastructure/notifier/telegram_notifier.cpp
-    src/dorm_energy/infrastructure/notifier/telegram_poller.cpp
     src/dorm_energy/infrastructure/handlers/message_handler.cpp
     src/dorm_energy/infrastructure/cli/cli_parser.cpp
     src/dorm_energy/infrastructure/mqtt/mqtt_client.cpp
@@ -26,9 +26,10 @@ add_library(dorm_energy_core STATIC
     src/dorm_energy/infrastructure/detection/rule_based_detector.cpp
     src/dorm_energy/infrastructure/notifier/telegram_queue.cpp
     src/dorm_energy/infrastructure/simulation/csv_exporter.cpp
+    src/dorm_energy/infrastructure/simulation/anomaly_report_exporter.cpp
+    src/dorm_energy/infrastructure/simulation/label_exporter.cpp
     src/dorm_energy/infrastructure/detection/room_state_aggregator.cpp
     src/dorm_energy/infrastructure/detection/anomaly_tracker.cpp
-    src/dorm_energy/infrastructure/detection/feature_extractor.cpp
     src/dorm_energy/infrastructure/detection/onnx_detector.cpp
     src/dorm_energy/infrastructure/detection/hybrid_detector.cpp
     src/dorm_energy/infrastructure/web/controllers/admin_controller.cpp

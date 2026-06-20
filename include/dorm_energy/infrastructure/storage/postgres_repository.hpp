@@ -98,7 +98,7 @@ namespace dorm_energy::storage
         std::vector<core::SensorReading> buffer_;
         const std::size_t maxBufferSize_;
 
-        std::mutex bufferMutex_; // thread-safety для будущего MQTT
+        std::mutex bufferMutex_; 
         std::mutex deviceCacheMutex_;
         std::unordered_set<std::string> knownDeviceIds_;
     };

@@ -3,9 +3,8 @@
 #include "dorm_energy/application/inotifier.hpp"
 #include "dorm_energy/core/room_state.hpp"
 #include "dorm_energy/domain/detection/anomaly_info.hpp"
-#include "telegram_config.hpp"
-#include "telegram_poller.hpp"
-#include "telegram_queue.hpp"
+#include "dorm_energy/infrastructure/notifier/telegram_config.hpp"
+#include "dorm_energy/infrastructure/notifier/telegram_queue.hpp"
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -28,7 +27,6 @@ namespace dorm_energy::notifier
         TelegramConfig config_;
         std::string apiUrl_;
         TelegramQueue queue_;
-        TelegramPoller poller_;
 
         std::thread workerThread_;
         std::atomic<bool> running_{false};

@@ -2,7 +2,6 @@
 
 #include "dorm_energy/application/config/app_config.hpp"
 #include "dorm_energy/application/factories/cli_factory.hpp"
-#include "dorm_energy/application/factories/command_factory.hpp"
 
 #include <memory>
 
@@ -15,7 +14,8 @@ namespace dorm_energy::application
     public:
         ApplicationBuilder() = default;
 
-        ApplicationBuilder &withConfig(AppConfig config);
+        ApplicationBuilder &withConfig(
+            AppConfig config);
 
         std::unique_ptr<Application> build();
 

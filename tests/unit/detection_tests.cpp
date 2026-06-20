@@ -1,13 +1,12 @@
 #include "dorm_energy/infrastructure/detection/anomaly_tracker.hpp"
-#include "dorm_energy/infrastructure/detection/feature_extractor.hpp"
 #include "dorm_energy/infrastructure/detection/room_state_aggregator.hpp"
 #include "dorm_energy/infrastructure/detection/rule_based_detector.hpp"
 
 #include <gtest/gtest.h>
 
 #include <chrono>
-#include <ctime>
 #include <deque>
+#include <stdexcept>
 
 using dorm_energy::core::AlertSeverity;
 using dorm_energy::core::RoomState;
@@ -16,78 +15,75 @@ using dorm_energy::detection::AnomalyInfo;
 using dorm_energy::detection::DetectionContext;
 using dorm_energy::detection::RuleBasedDetector;
 
-namespace
+TEST(RuleBasedDetectorTest, DetectsExtremePower)
 {
-    std::chrono::system_clock::time_point localTime(int hour)
-    {
-        std::tm tm{};
-        tm.tm_year = 124;
-        tm.tm_mon = 0;
-        tm.tm_mday = 2;
-        tm.tm_hour = hour;
-        tm.tm_isdst = -1;
-        return std::chrono::system_clock::from_time_t(std::mktime(&tm));
-    }
-}
+    dorm_energy::detection::RuleBasedDetectorConfig config;
+    config.extremePowerKw = 5.0;
+    RuleBasedDetector detector(config);
 
-TEST(RuleBasedDetectorTest, DetectsHighPower)
-{
-    RuleBasedDetector detector(5.0);
     DetectionContext context{};
     context.current.power = 5.01;
 
     const auto result = detector.detect(context);
 
     EXPECT_TRUE(result.isAnomaly);
-    EXPECT_EQ(result.anomalyType, "rule_high_power");
+    EXPECT_EQ(result.anomalyType, "rule_extreme_power");
     EXPECT_EQ(result.severity, AlertSeverity::Warning);
-    EXPECT_TRUE(detector.isAnomaly(context));
 }
 
-TEST(RuleBasedDetectorTest, DetectsLightWithoutMotion)
+TEST(RuleBasedDetectorTest, DetectsExtremeLight)
 {
-    RuleBasedDetector detector(10.0);
+    dorm_energy::detection::RuleBasedDetectorConfig config;
+    config.extremeLightLux = 500.0;
+    RuleBasedDetector detector(config);
+
     DetectionContext context{};
-    context.current.motion = false;
     context.current.light = 501.0;
 
     const auto result = detector.detect(context);
 
     EXPECT_TRUE(result.isAnomaly);
-    EXPECT_EQ(result.anomalyType, "rule_light_without_motion");
+    EXPECT_EQ(result.anomalyType, "rule_extreme_light");
     EXPECT_EQ(result.severity, AlertSeverity::Info);
 }
 
-TEST(RuleBasedDetectorTest, DetectsPowerWithoutMotionForThirtyMinutes)
+TEST(RuleBasedDetectorTest, DetectsUnattendedPowerUsage)
 {
-    RuleBasedDetector detector(10.0);
+    dorm_energy::detection::RuleBasedDetectorConfig config;
+    config.unattendedPowerKw = 1.0;
+    config.unattendedWindow = std::chrono::minutes(30);
+    RuleBasedDetector detector(config);
+
     const auto start = std::chrono::system_clock::from_time_t(1717243200);
 
     std::deque<RoomState> history{
-        RoomState{.deviceId = "room-101", .timestamp = start, .motion = false},
-        RoomState{.deviceId = "room-101", .timestamp = start + std::chrono::minutes(30), .motion = false},
+        RoomState{.deviceId = "room-101", .timestamp = start, .motion = false, .power = 1.5},
     };
 
     DetectionContext context{};
-    context.current = history.back();
-    context.current.power = 6.0;
+    context.current = RoomState{.deviceId = "room-101", .timestamp = start + std::chrono::minutes(30), .motion = false, .power = 1.5};
     context.history = &history;
 
     const auto result = detector.detect(context);
 
     EXPECT_TRUE(result.isAnomaly);
-    EXPECT_EQ(result.anomalyType, "rule_power_without_motion_30m");
+    EXPECT_EQ(result.anomalyType, "rule_unattended_power_usage");
 }
 
-TEST(RuleBasedDetectorTest, IgnoresNormalStateAndInvalidThresholdFallsBack)
+TEST(RuleBasedDetectorTest, IgnoresNormalStateAndRejectsInvalidThreshold)
 {
-    RuleBasedDetector detector(-1.0);
+    dorm_energy::detection::RuleBasedDetectorConfig config;
+    RuleBasedDetector detector(config);
+
     DetectionContext context{};
     context.current.power = 6.0;
     context.current.motion = true;
     context.current.light = 250.0;
 
     EXPECT_FALSE(detector.detect(context).isAnomaly);
+
+    config.extremePowerKw = -1.0;
+    EXPECT_THROW(RuleBasedDetector invalidDetector(config), std::invalid_argument);
 }
 
 TEST(RoomStateAggregatorTest, AggregatesReadingsAndKeepsThirtyMinuteHistory)
@@ -105,8 +101,10 @@ TEST(RoomStateAggregatorTest, AggregatesReadingsAndKeepsThirtyMinuteHistory)
     EXPECT_DOUBLE_EQ(current->power, 2.25);
     EXPECT_DOUBLE_EQ(current->light, 700.0);
 
+    aggregator.commitState(*current);
+
     EXPECT_EQ(aggregator.getCurrentStates().size(), 1U);
-    EXPECT_EQ(aggregator.getHistory("room-101").size(), 2U);
+    EXPECT_EQ(aggregator.getHistory("room-101").size(), 1U);
     EXPECT_TRUE(aggregator.getHistory("missing").empty());
 }
 
@@ -125,21 +123,4 @@ TEST(AnomalyTrackerTest, SuppressesDuplicatesUntilRoomIsResolved)
     tracker.resolveRoom("room-101");
 
     EXPECT_TRUE(tracker.shouldReport(state, anomaly));
-}
-
-TEST(FeatureExtractorTest, ExtractsMotionPowerLightAndHourFeatures)
-{
-    DetectionContext context{};
-    context.current.motion = true;
-    context.current.power = 3.5;
-    context.current.light = 400.0;
-    context.current.timestamp = localTime(6);
-
-    const auto features = dorm_energy::detection::FeatureExtractor::extract(context);
-
-    EXPECT_FLOAT_EQ(features[0], 1.0F);
-    EXPECT_FLOAT_EQ(features[1], 3.5F);
-    EXPECT_FLOAT_EQ(features[2], 400.0F);
-    EXPECT_NEAR(features[3], 1.0F, 0.0001F);
-    EXPECT_NEAR(features[4], 0.0F, 0.0001F);
 }

@@ -10,14 +10,15 @@ namespace dorm_energy::mqtt
     class IMqttConnection;
     class IMqttSubscription;
     class IMqttMessageDispatcher;
-} 
+} // namespace dorm_energy::mqtt
 
 namespace dorm_energy::application::factories
 {
     class MqttFactory
     {
     public:
-        explicit MqttFactory(const AppConfig &config);
+        explicit MqttFactory(
+            const AppConfig &config);
 
         std::shared_ptr<mqtt::IMqttConnection> createConnection();
         std::shared_ptr<mqtt::IMqttSubscription> createSubscription();
@@ -25,8 +26,8 @@ namespace dorm_energy::application::factories
 
     private:
         const AppConfig &config_;
+        
         std::shared_ptr<mqtt::MqttClient> mqttClient_{};
-
         std::shared_ptr<mqtt::MqttClient> createClient();
     };
 } // namespace dorm_energy::application::factories

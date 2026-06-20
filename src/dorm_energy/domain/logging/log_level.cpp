@@ -36,23 +36,4 @@ namespace dorm_energy::logging
 
         return LogLevel::Info;
     }
-
-    const char *toString(LogLevel level)
-    {
-        switch (level)
-        {
-        case LogLevel::Debug:
-            return "debug";
-        case LogLevel::Info:
-            return "info";
-        case LogLevel::Warn:
-            return "warn";
-        case LogLevel::Error:
-            return "error";
-        case LogLevel::Critical:
-            return "critical";
-        default:
-            return "info";
-        }
-    }
 }

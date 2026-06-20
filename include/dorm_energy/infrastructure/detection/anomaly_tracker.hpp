@@ -12,14 +12,19 @@ namespace dorm_energy::detection
     class AnomalyTracker
     {
     public:
-        bool shouldReport(const core::RoomState &state, const AnomalyInfo &anomaly);
+        bool shouldReport(
+            const core::RoomState &state,
+            const AnomalyInfo &anomaly);
 
-        void resolveRoom(const std::string &deviceId);
+        void resolveRoom(
+            const std::string &deviceId);
 
     private:
         std::unordered_set<std::string> active_;
 
-        std::string makeKey(const core::RoomState &state, const AnomalyInfo &anomaly) const;
+        std::string makeKey(
+            const core::RoomState &state,
+            const AnomalyInfo &anomaly) const;
     };
 
 } // namespace dorm_energy::detection

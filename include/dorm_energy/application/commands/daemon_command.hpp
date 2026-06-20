@@ -26,12 +26,12 @@ namespace dorm_energy::application
             std::unique_ptr<application::IMessageHandler> message_handler,
             std::shared_ptr<dorm_energy::web::WebServer> web_server);
 
-        bool canHandle(const cli::CommandOptions &options) const override;
-        int execute(const cli::CommandOptions &options) override;
+        bool canHandle(const cli::ParsedCommand &options) const override;
+        int execute() override;
 
     private:
         std::shared_ptr<dorm_energy::logging::ILogger> logger_;
-        const AppConfig &config_;
+        const AppConfig &config_; // перенести выше для красоты
 
         std::shared_ptr<dorm_energy::mqtt::IMqttConnection> mqtt_connection_;
         std::shared_ptr<dorm_energy::mqtt::IMqttSubscription> mqtt_subscription_;

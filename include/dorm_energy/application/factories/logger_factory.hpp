@@ -14,7 +14,8 @@ namespace dorm_energy::application::factories
     class LoggerFactory
     {
     public:
-        explicit LoggerFactory(const AppConfig &config);
+        explicit LoggerFactory(
+            const AppConfig &config);
 
         std::shared_ptr<logging::ILogger> create();
 

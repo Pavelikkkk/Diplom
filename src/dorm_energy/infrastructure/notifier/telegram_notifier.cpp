@@ -27,7 +27,7 @@ namespace dorm_energy::notifier
     {
     }
 
-    TelegramNotifier::TelegramNotifier(TelegramConfig cfg) : config_(std::move(cfg)), poller_(config_)
+    TelegramNotifier::TelegramNotifier(TelegramConfig cfg) : config_(std::move(cfg))
     {
         if (config_.enabled && !config_.botToken.empty() && !config_.chatId.empty())
         {
@@ -35,15 +35,12 @@ namespace dorm_energy::notifier
             std::cout << "[TelegramNotifier] Initialized (chat_id: " << config_.chatId << ")\n";
 
             startQueueWorker();
-            std::cout << "[TelegramNotifier] Poller exists\n";
-            // poller_.start();
         }
     }
 
     TelegramNotifier::~TelegramNotifier()
     {
         stopQueueWorker();
-        // poller_.stop();
     }
 
     bool TelegramNotifier::sendAlert(const core::RoomState &state,

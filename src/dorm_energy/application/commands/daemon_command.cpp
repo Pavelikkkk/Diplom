@@ -31,14 +31,13 @@ namespace dorm_energy::application
         }
     }
 
-    bool DaemonCommand::canHandle(const cli::CommandOptions &options) const
+    bool DaemonCommand::canHandle(const cli::ParsedCommand &options) const
     {
         return options.type == cli::CommandType::Daemon;
     }
 
-    int DaemonCommand::execute(const cli::CommandOptions &options)
+    int DaemonCommand::execute()
     {
-        (void)options;
         logger_->info("Launching Dorm Energy Daemon (MQTT listener)...");
 
         web_server_->start();

@@ -10,20 +10,20 @@
 
 namespace dorm_energy::detection
 {
-
     class OnnxDetector final : public IStateDetector
     {
     public:
-        explicit OnnxDetector(const std::string &modelPath);
+        explicit OnnxDetector(
+            const std::string &modelPath,
+            OnnxModelConfig config = {});
 
-        bool isAnomaly(const DetectionContext &context) const override;
-
-        AnomalyInfo detect(const DetectionContext &context) const override;
-
-    private:
-        float calculateError(const DetectionContext &context) const;
+        AnomalyInfo detect(
+            const DetectionContext &context) const override;
 
     private:
+        float calculateError(
+            const DetectionContext &context) const;
+            
         OnnxModelConfig config_;
 
         Ort::Env env_;
@@ -32,5 +32,4 @@ namespace dorm_energy::detection
 
         std::unique_ptr<Ort::Session> session_;
     };
-
-} // namespace dorm_energy::detection
+}

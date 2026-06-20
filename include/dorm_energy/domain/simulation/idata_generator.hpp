@@ -1,32 +1,19 @@
-// include/dorm_energy/domain/simulation/idata_generator.hpp
 #pragma once
 
-#include "dorm_energy/core/measurement.hpp"
+#include "dorm_energy/domain/simulation/generated_dataset.hpp"
+#include "dorm_energy/domain/simulation/simulation_device.hpp"
+
+#include <vector>
 
 namespace dorm_energy::simulation
 {
-    /**
-     * @brief Интерфейс для генерации синтетических данных
-     *
-     * Используется в симуляции и тестах.
-     */
     class IDataGenerator
     {
     public:
         virtual ~IDataGenerator() = default;
 
-        /**
-         * @brief Генерирует батч показаний датчиков
-         * @return Набор сгенерированных SensorReading
-         */
-        virtual core::ReadingsBatch generate() const = 0;
-
-        virtual core::ReadingsBatch generate_for_days(int days) const = 0;
-
-        /**
-         * @brief Устанавливает seed для воспроизводимости генерации
-         */
-        virtual void setSeed(unsigned seed) = 0;
+        virtual GeneratedDataset generate(
+            int days,
+            const std::vector<SimulationDevice> &devices) = 0;
     };
-
 } // namespace dorm_energy::simulation

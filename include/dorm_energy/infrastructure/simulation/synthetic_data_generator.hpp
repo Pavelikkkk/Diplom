@@ -1,54 +1,101 @@
-// include/dorm_energy/infrastructure/simulation/synthetic_data_generator.hpp
 #pragma once
 
+#include "dorm_energy/application/config/generator_config.hpp"
+#include "dorm_energy/core/alert_severity.hpp"
+#include "dorm_energy/core/aliases.hpp"
 #include "dorm_energy/core/measurement.hpp"
+#include "dorm_energy/domain/simulation/generated_dataset.hpp"
 #include "dorm_energy/domain/simulation/idata_generator.hpp"
-#include "dorm_energy/domain/storage/imeasurement_repository.hpp"
+#include "dorm_energy/domain/simulation/simulation_device.hpp"
+#include "dorm_energy/infrastructure/simulation/synthetic_data_types.hpp"
 
 #include <chrono>
 #include <random>
+#include <string>
+#include <vector>
 
 namespace dorm_energy::simulation
 {
+
     class SyntheticDataGenerator : public IDataGenerator
     {
     public:
         explicit SyntheticDataGenerator(
-            unsigned seed = 42, bool inject_anomalies = false, double anomaly_rate = 0.03,
-            std::shared_ptr<storage::IMeasurementRepository> repository = nullptr);
+            SyntheticDataGeneratorConfig config = {});
 
-        void setSeed(unsigned seed) override;
+        SyntheticDataGenerator(
+            int seed,
+            bool injectAnomalies,
+            double anomalyRate);
 
-        core::ReadingsBatch generate() const override;
-        core::ReadingsBatch generate_for_days(int days) const override;
+        GeneratedDataset generate(
+            int days,
+            const std::vector<SimulationDevice> &devices) override;
 
     private:
-        struct RoomState
+        enum class TimeOfDay
         {
-            bool motion;
-            double power;
-            double light;
-
-            std::string deviceId;
-
-            std::chrono::system_clock::time_point timestamp;
+            Night,
+            Morning,
+            Day,
+            Evening
         };
 
-        RoomState generate_room_state(const std::string &deviceId,
-                                      std::chrono::system_clock::time_point timestamp) const;
+        SyntheticSample generateSyntheticSample(
+            const std::string &deviceId,
+            core::TimePoint timestamp);
 
-        mutable std::mt19937 rng_;
-        bool inject_anomalies_;
-        double anomaly_rate_;
-        std::shared_ptr<storage::IMeasurementRepository> repository_;
+        TimeOfDay getTimeOfDay(
+            core::TimePoint timestamp) const;
 
-        core::SensorReading generate_one_reading(std::chrono::system_clock::time_point base_time,
-                                                 int reading_index) const;
+        double getMotionProbability(
+            TimeOfDay timeOfDay) const;
 
-        RoomState generateRoomState(const std::string &deviceId,
-                                    std::chrono::system_clock::time_point timestamp) const;
+        bool generateMotion(
+            double probability);
 
-        int extract_hour(std::chrono::system_clock::time_point tp) const;
+        void generateNormalValues(
+            SyntheticSample &sample);
+
+        void applyTimeOfDayAdjustment(
+            SyntheticSample &sample,
+            TimeOfDay timeOfDay) const;
+
+        std::vector<SyntheticScenario> createScenarios(
+            int days,
+            const std::vector<SimulationDevice> &devices,
+            core::TimePoint start);
+
+        const SyntheticScenario *findScenario(
+            const std::vector<SyntheticScenario> &scenarios,
+            const std::string &deviceId,
+            core::TimePoint timestamp) const;
+
+        void applyScenarioEffect(
+            SyntheticSample &sample,
+            const SyntheticScenario &scenario);
+
+        void applyScenarioLabelIfMature(
+            SyntheticSample &sample,
+            const SyntheticScenario &scenario) const;
+
+        void applyPointAnomalyIfNeeded(
+            SyntheticSample &sample);
+
+        core::SensorReading makeMotionReading(
+            const SyntheticSample &sample) const;
+
+        core::SensorReading makePowerReading(
+            const SyntheticSample &sample) const;
+
+        core::SensorReading makeLightReading(
+            const SyntheticSample &sample) const;
+
+        SimulationLabel makeLabel(
+            const SyntheticSample &sample) const;
+
+        SyntheticDataGeneratorConfig config_;
+
+        std::mt19937 rng_;
     };
-
-} // namespace dorm_energy::simulation
+}

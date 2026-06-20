@@ -15,7 +15,7 @@ namespace dorm_energy::cli
     public:
         CliParser();
 
-        ParseResult parse(int argc, char **argv, CommandOptions &options) override;
+        ParseResult parse(int argc, char **argv, ParsedCommand &options) override;
 
     private:
         void setupCommands();

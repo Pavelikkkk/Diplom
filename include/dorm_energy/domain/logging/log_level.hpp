@@ -14,5 +14,4 @@ namespace dorm_energy::logging
     };
 
     LogLevel parseLogLevel(const std::string &value);
-    const char *toString(LogLevel level);
 }

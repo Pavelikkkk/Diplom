@@ -2,8 +2,6 @@
 
 #include "dorm_energy/infrastructure/storage/postgres_repository.hpp"
 
-#include <exception>
-#include <iostream>
 #include <memory>
 #include <string>
 
@@ -11,7 +9,9 @@ namespace dorm_energy::application::factories
 {
     RepositoryFactory::RepositoryFactory(
         const AppConfig &config)
-        : config_(config) {}
+        : config_(config)
+    {
+    }
 
     std::shared_ptr<storage::IMeasurementRepository> RepositoryFactory::create()
     {
@@ -20,18 +20,10 @@ namespace dorm_energy::application::factories
             return repository_;
         }
 
-        try
-        {
-            const std::string connStr = config_.getDbConnectionString();
+        const std::string connStr = config_.getDbConnectionString();
 
-            repository_ = std::make_shared<storage::PostgresMeasurementRepository>(connStr, config_.getDbMaxBufferSize());
+        repository_ = std::make_shared<storage::PostgresMeasurementRepository>(connStr, config_.getDbMaxBufferSize());
 
-            return repository_;
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "[RepositoryFactory] Failed to create repository: " << e.what() << '\n';
-            throw;
-        }
+        return repository_;
     }
 } // namespace dorm_energy::application::factories

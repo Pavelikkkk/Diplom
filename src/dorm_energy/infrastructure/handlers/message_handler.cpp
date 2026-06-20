@@ -1,5 +1,5 @@
 #include "dorm_energy/infrastructure/handlers/message_handler.hpp"
-#include "dorm_energy/core/detection_context.hpp"
+#include "dorm_energy/domain/detection/detection_context.hpp"
 
 #include <fmt/format.h>
 #include <iostream>
@@ -46,6 +46,8 @@ namespace dorm_energy::handlers
         context.history = &aggregator_->getHistory(state->deviceId);
 
         auto anomalyInfo = detector_->detect(context);
+
+        aggregator_->commitState(*state);
 
         if (!anomalyInfo.isAnomaly)
         {

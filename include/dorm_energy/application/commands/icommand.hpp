@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dorm_energy/application/cli/command_options.hpp"
+#include "dorm_energy/application/cli/parsed_command.hpp"
 
 namespace dorm_energy::application
 {
@@ -9,7 +9,7 @@ namespace dorm_energy::application
     public:
         virtual ~ICommand() = default;
 
-        virtual bool canHandle(const cli::CommandOptions &options) const = 0;
-        virtual int execute(const cli::CommandOptions &options) = 0;
+        virtual bool canHandle(const cli::ParsedCommand &options) const = 0;
+        virtual int execute() = 0;
     };
 } // namespace dorm_energy::application

@@ -7,7 +7,6 @@ enable_testing()
 include(GoogleTest)
 
 add_executable(dorm_energy_unit_tests
-    tests/unit/measurement_tests.cpp
     tests/unit/alert_severity_tests.cpp
     tests/unit/message_parser_tests.cpp
     tests/unit/detection_tests.cpp

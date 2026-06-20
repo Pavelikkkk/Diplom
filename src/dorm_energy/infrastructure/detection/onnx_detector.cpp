@@ -1,146 +1,165 @@
 #include "dorm_energy/infrastructure/detection/onnx_detector.hpp"
 
-#include <cmath>
+#include "dorm_energy/core/time_utils.hpp"
+
 #include <array>
-#include <chrono>
-#include <iostream>
+#include <cmath>
+#include <numbers>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 namespace dorm_energy::detection
 {
-
     namespace
     {
-        constexpr std::array<float, 5> MEAN = {
-            0.41319444f,
-            2.4755468f,
-            253.50294f,
-            0.0f,
-            0.0f};
+        using FeatureArray = std::array<float, OnnxModelConfig::FeatureCount>;
 
-        constexpr std::array<float, 5> SCALE = {
-            0.49240714f,
-            2.5410394f,
-            291.89593f,
-            0.70710678f,
-            0.70710678f};
+        void validateConfig(
+            const OnnxModelConfig &config)
+        {
+            if (config.anomalyThreshold <= 0.0f)
+            {
+                throw std::invalid_argument("anomalyThreshold must be greater than zero");
+            }
 
-        constexpr float THRESHOLD = 0.15f; // потом считать из threshold.txt
+            for (const auto scale : config.scale)
+            {
+                if (scale == 0.0f)
+                {
+                    throw std::invalid_argument("ONNX feature scale must not be zero");
+                }
+            }
+        }
+
+        FeatureArray extractFeatures(
+            const DetectionContext &context)
+        {
+            const auto &state = context.current;
+            const int hour = core::extractLocalHour(state.timestamp);
+
+            const float angle =
+                2.0f *
+                std::numbers::pi_v<float> *
+                static_cast<float>(hour) /
+                24.0f;
+
+            return FeatureArray{
+                state.motion ? 1.0f : 0.0f,
+                static_cast<float>(state.power),
+                static_cast<float>(state.light),
+                std::sin(angle),
+                std::cos(angle)};
+        }
+
+        FeatureArray normalizeFeatures(
+            FeatureArray features,
+            const OnnxModelConfig &config)
+        {
+            for (std::size_t i = 0; i < features.size(); ++i)
+            {
+                features[i] = (features[i] - config.mean[i]) / config.scale[i];
+            }
+
+            return features;
+        }
+
+        float calculateMse(
+            const FeatureArray &input,
+            const float *output)
+        {
+            float mse = 0.0f;
+
+            for (std::size_t i = 0; i < input.size(); ++i)
+            {
+                const float diff = input[i] - output[i];
+                mse += diff * diff;
+            }
+
+            return mse / static_cast<float>(input.size());
+        }
+
+        AnomalyInfo makeNormal(
+            float score)
+        {
+            AnomalyInfo info;
+            info.score = score;
+            return info;
+        }
+
+        AnomalyInfo makeMlAnomaly(
+            float score)
+        {
+            AnomalyInfo info;
+            info.isAnomaly = true;
+            info.anomalyType = "ml_autoencoder_anomaly";
+            info.description = "Autoencoder reconstruction error: " + std::to_string(score);
+            info.severity = core::AlertSeverity::Warning;
+            info.score = score;
+
+            return info;
+        }
     }
 
     OnnxDetector::OnnxDetector(
-        const std::string &modelPath) : env_(ORT_LOGGING_LEVEL_WARNING, "onnx")
+        const std::string &modelPath,
+        OnnxModelConfig config)
+        : config_(config),
+          env_(ORT_LOGGING_LEVEL_WARNING, "onnx")
     {
-        options_.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+        validateConfig(config_);
+
+        options_.SetGraphOptimizationLevel(
+            GraphOptimizationLevel::ORT_ENABLE_ALL);
 
 #ifdef _WIN32
-
-        std::wstring widePath(modelPath.begin(), modelPath.end());
+        const std::wstring widePath(modelPath.begin(), modelPath.end());
 
         session_ = std::make_unique<Ort::Session>(env_, widePath.c_str(), options_);
-
 #else
-
         session_ = std::make_unique<Ort::Session>(env_, modelPath.c_str(), options_);
-
 #endif
-    }
-
-    bool OnnxDetector::isAnomaly(
-        const DetectionContext &context) const
-    {
-        return detect(context).isAnomaly;
     }
 
     AnomalyInfo OnnxDetector::detect(
         const DetectionContext &context) const
     {
-        AnomalyInfo info;
+        const float error = calculateError(context);
 
-        float error = calculateError(context);
-
-        info.score = error;
-
-        if (error > THRESHOLD)
+        if (error > config_.anomalyThreshold)
         {
-            info.isAnomaly = true;
-
-            info.anomalyType = "ml_anomaly";
-
-            info.description = "Autoencoder reconstruction error: " + std::to_string(error);
-
-            info.severity = core::AlertSeverity::Warning;
+            return makeMlAnomaly(error);
         }
 
-        return info;
+        return makeNormal(error);
     }
 
     float OnnxDetector::calculateError(
         const DetectionContext &context) const
     {
-        const auto &state = context.current;
+        auto inputValues = normalizeFeatures(extractFeatures(context), config_);
 
-        auto time = std::chrono::system_clock::to_time_t(state.timestamp);
-
-        std::tm localTm{};
-
-#ifdef _WIN32
-        localtime_s(&localTm, &time);
-#else
-        localtime_r(&time, &localTm);
-#endif
-
-        float hour = static_cast<float>(localTm.tm_hour);
-
-        float hourSin = std::sin(2.0f * 3.14159265f * hour / 24.0f);
-
-        float hourCos = std::cos(2.0f * 3.14159265f * hour / 24.0f);
-
-        std::array<float, 5> inputValues = {
-            state.motion ? 1.0f : 0.0f,
-            static_cast<float>(state.power),
-            static_cast<float>(state.light),
-            hourSin,
-            hourCos};
-
-        for (std::size_t i = 0; i < inputValues.size(); ++i)
-        {
-            inputValues[i] = (inputValues[i] - MEAN[i]) / SCALE[i];
-        }
-
-        std::array<int64_t, 2> inputShape{1, 5};
+        std::array<int64_t, 2> inputShape{1, static_cast<int64_t>(OnnxModelConfig::FeatureCount)};
 
         Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
         Ort::Value inputTensor = Ort::Value::CreateTensor<float>(memoryInfo,
-                                                                 inputValues.data(),
-                                                                 inputValues.size(),
-                                                                 inputShape.data(),
-                                                                 inputShape.size());
+                                                                 inputValues.data(), inputValues.size(),
+                                                                 inputShape.data(), inputShape.size());
 
         const char *inputNames[] = {"input"};
-
         const char *outputNames[] = {"output"};
 
-        auto outputs = session_->Run(Ort::RunOptions{nullptr},
-                                     inputNames,
-                                     &inputTensor,
-                                     1,
-                                     outputNames,
-                                     1);
+        auto outputs =
+            session_->Run(Ort::RunOptions{nullptr},
+                          inputNames,
+                          &inputTensor, 1,
+                          outputNames, 1);
 
-        float *output = outputs[0].GetTensorMutableData<float>();
+        const float *output = outputs[0].GetTensorData<float>();
 
-        float mse = 0.0f;
-
-        for (std::size_t i = 0; i < inputValues.size(); ++i)
-        {
-            float diff = inputValues[i] - output[i];
-            mse += diff * diff;
-        }
-
-        mse /= static_cast<float>(inputValues.size());
-
-        return mse;
+        return calculateMse(
+            inputValues,
+            output);
     }
-
 } // namespace dorm_energy::detection

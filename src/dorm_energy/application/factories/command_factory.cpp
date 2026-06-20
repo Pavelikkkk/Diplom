@@ -3,6 +3,7 @@
 #include "dorm_energy/application/cli/command_type.hpp"
 #include "dorm_energy/application/commands/daemon_command.hpp"
 #include "dorm_energy/application/commands/simulate_command.hpp"
+#include "dorm_energy/application/inotifier.hpp"
 
 #include <memory>
 #include <utility>
@@ -19,22 +20,20 @@ namespace dorm_energy::application::factories
           mqttFactory_(config_),
           notificationFactory_(config_),
           repositoryFactory_(config_),
-          simulationFactory_(config_)
+          simulationFactory_(config_),
+          stateFactory_(config_)
     {
     }
 
-    std::unique_ptr<ICommand> CommandFactory::createCommand(const cli::CommandOptions &options)
+    std::unique_ptr<ICommand> CommandFactory::createCommand(const cli::ParsedCommand &options)
     {
         if (options.type == cli::CommandType::Simulate)
         {
-            auto repository = repositoryFactory_.create();
-
             return std::make_unique<SimulateCommand>(
                 logger_,
                 config_,
-                simulationFactory_.createGenerator(repository),
-                detectionFactory_.create(),
-                repository);
+                simulationFactory_.createGenerator(),
+                detectionFactory_.create());
         }
 
         if (options.type == cli::CommandType::Daemon)

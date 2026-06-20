@@ -7,22 +7,17 @@
 namespace dorm_energy::simulation
 {
     class IDataGenerator;
-}
-
-namespace dorm_energy::storage
-{
-    class IMeasurementRepository;
-}
+} // namespace dorm_energy::simulation
 
 namespace dorm_energy::application::factories
 {
     class SimulationFactory
     {
     public:
-        explicit SimulationFactory(const AppConfig &config);
+        explicit SimulationFactory(
+            const AppConfig &config);
 
-        std::unique_ptr<simulation::IDataGenerator>
-        createGenerator(std::shared_ptr<storage::IMeasurementRepository> repository) const;
+        std::unique_ptr<simulation::IDataGenerator> createGenerator() const;
 
     private:
         const AppConfig &config_;

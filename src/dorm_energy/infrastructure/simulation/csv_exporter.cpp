@@ -1,8 +1,8 @@
 #include "dorm_energy/infrastructure/simulation/csv_exporter.hpp"
 
+#include "dorm_energy/core/csv_utils.hpp"
+
 #include <fstream>
-#include <iomanip>
-#include <filesystem>
 
 namespace dorm_energy::simulation
 {
@@ -11,7 +11,7 @@ namespace dorm_energy::simulation
         const core::ReadingsBatch &readings,
         const std::filesystem::path &filePath)
     {
-        std::filesystem::create_directories(filePath.parent_path());
+        csv::ensureParentDirectory(filePath);
 
         std::ofstream file(filePath);
 
@@ -29,17 +29,10 @@ namespace dorm_energy::simulation
                 value = reading.boolValue.value_or(false);
             }
 
-            auto tt = std::chrono::system_clock::to_time_t(reading.timestamp);
-
-            std::tm tm{};
-
-#ifdef _WIN32
-            localtime_s(&tm, &tt);
-#else
-            localtime_r(&tt, &tm);
-#endif
-
-            file << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << "," << reading.deviceId << "," << reading.sensorType << "," << value << "\n";
+            file << csv::formatTimestamp(reading.timestamp) << ","
+                 << csv::escape(reading.deviceId) << ","
+                 << csv::escape(reading.sensorType) << ","
+                 << value << "\n";
         }
 
         return true;

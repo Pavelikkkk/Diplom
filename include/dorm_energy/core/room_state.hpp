@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dorm_energy/core/aliases.hpp"
+
 #include <chrono>
 #include <string>
 
@@ -8,9 +10,9 @@ namespace dorm_energy::core
 
     struct RoomState
     {
-        std::string deviceId;
+        std::string deviceId{};
 
-        std::chrono::system_clock::time_point timestamp;
+        TimePoint timestamp;
 
         bool motion{false};
 

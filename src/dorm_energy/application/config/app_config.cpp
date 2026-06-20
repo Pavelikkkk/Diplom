@@ -1,6 +1,7 @@
 #include "dorm_energy/application/config/app_config.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
@@ -13,7 +14,8 @@
 
 namespace
 {
-    std::string trim(std::string value)
+    std::string trim(
+        std::string value)
     {
         const auto first = value.find_first_not_of(" \t\r\n");
 
@@ -25,14 +27,17 @@ namespace
         return value.substr(first, last - first + 1);
     }
 
-    std::string strToLower(std::string value)
+    std::string strToLower(
+        std::string value)
     {
         std::transform(value.begin(), value.end(), value.begin(),
-                       [](unsigned char c) { return std::tolower(c); });
+                       [](unsigned char c)
+                       { return std::tolower(c); });
         return value;
     }
 
-    bool parseBool(const std::string &value)
+    bool parseBool(
+        const std::string &value)
     {
         const std::string normalized = strToLower(trim(value));
 
@@ -40,7 +45,9 @@ namespace
                normalized == "yes";
     }
 
-    int parseIntOrThrow(const std::string &key, const std::string &value)
+    int parseIntOrThrow(
+        const std::string &key,
+        const std::string &value)
     {
         try
         {
@@ -60,7 +67,9 @@ namespace
         }
     }
 
-    double parseDoubleOrThrow(const std::string &key, const std::string &value)
+    double parseDoubleOrThrow(
+        const std::string &key,
+        const std::string &value)
     {
         try
         {
@@ -80,7 +89,8 @@ namespace
         }
     }
 
-    std::optional<std::size_t> parseSize(const std::string &value)
+    std::optional<std::size_t> parseSize(
+        const std::string &value)
     {
         try
         {
@@ -100,14 +110,19 @@ namespace
         }
     }
 
-    void warnInvalidConfigValue(const std::string &key, const std::string &value,
-                                const std::string &fallback)
+    void warnInvalidConfigValue(
+        const std::string &key,
+        const std::string &value,
+        const std::string &fallback)
     {
         std::cerr << "Warning: invalid " << key << " value \"" << value
                   << "\", using default/current value: " << fallback << '\n';
     }
 
-    void applyOptionalSize(std::size_t &target, const std::string &key, const std::string &value)
+    void applyOptionalSize(
+        std::size_t &target,
+        const std::string &key,
+        const std::string &value)
     {
         if (const auto parsed = parseSize(value))
         {
@@ -119,7 +134,8 @@ namespace
         }
     }
 
-    std::filesystem::path resolveEnvFilePath(const std::string &filename)
+    std::filesystem::path resolveEnvFilePath(
+        const std::string &filename)
     {
         try
         {
@@ -159,7 +175,8 @@ namespace dorm_energy::application
         return config;
     }
 
-    AppConfig AppConfig::loadFromEnvFile(const std::string &filename)
+    AppConfig AppConfig::loadFromEnvFile(
+        const std::string &filename)
     {
         AppConfig config;
 
@@ -197,11 +214,41 @@ namespace dorm_energy::application
             else if (key == "SIMULATION_DAYS")
                 config.simulationDays_ = parseIntOrThrow(key, value);
             else if (key == "RANDOM_SEED")
-                config.randomSeed_ = parseIntOrThrow(key, value);
+                config.generatorConfig_.seed = parseIntOrThrow(key, value);
             else if (key == "INJECT_ANOMALIES")
-                config.injectAnomalies_ = parseBool(value);
+                config.generatorConfig_.injectAnomalies = parseBool(value);
             else if (key == "ANOMALY_RATE")
-                config.anomalyRate_ = parseDoubleOrThrow(key, value);
+            {
+                const double anomalyRate = parseDoubleOrThrow(key, value);
+                config.generatorConfig_.pointAnomalyRate = anomalyRate;
+                config.generatorConfig_.scenarioAnomalyRate = anomalyRate;
+            }
+            else if (key == "SIMULATION_DATASET_PATH")
+                config.simulationDatasetPath_ = value;
+            else if (key == "SIMULATION_LABELS_PATH")
+                config.simulationLabelsPath_ = value;
+            else if (key == "SIMULATION_ANOMALY_REPORT_PATH")
+                config.simulationAnomalyReportPath_ = value;
+            else if (key == "ONNX_MODEL_PATH")
+                config.onnxModelPath_ = value;
+            else if (key == "ONNX_ANOMALY_THRESHOLD")
+                config.onnxModelConfig_.anomalyThreshold = static_cast<float>(parseDoubleOrThrow(key, value));
+            else if (key == "RULE_EXTREME_POWER_KW")
+                config.ruleBasedDetectorConfig_.extremePowerKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_EXTREME_LIGHT_LUX")
+                config.ruleBasedDetectorConfig_.extremeLightLux = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_SUSTAINED_HIGH_POWER_KW")
+                config.ruleBasedDetectorConfig_.sustainedHighPowerKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_UNATTENDED_POWER_KW")
+                config.ruleBasedDetectorConfig_.unattendedPowerKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_SUDDEN_POWER_SPIKE_KW")
+                config.ruleBasedDetectorConfig_.suddenPowerSpikeKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_REPEATED_SPIKE_DELTA_KW")
+                config.ruleBasedDetectorConfig_.repeatedSpikeDeltaKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_REPEATED_SPIKE_MIN_COUNT")
+                config.ruleBasedDetectorConfig_.repeatedSpikeMinCount = parseIntOrThrow(key, value);
+            else if (key == "DETECTION_HISTORY_WINDOW_MINUTES")
+                config.roomStateAggregatorConfig_.historyWindow = std::chrono::minutes(parseIntOrThrow(key, value));
             else if (key == "DB_HOST")
                 config.dbHost_ = value;
             else if (key == "DB_PORT")
@@ -256,12 +303,43 @@ namespace dorm_energy::application
             simulationDays_ = parseIntOrThrow("SIMULATION_DAYS", val);
 
         if (const char *val = std::getenv("RANDOM_SEED"))
-            randomSeed_ = parseIntOrThrow("RANDOM_SEED", val);
+            generatorConfig_.seed = parseIntOrThrow("RANDOM_SEED", val);
 
         if (const char *val = std::getenv("INJECT_ANOMALIES"))
-            injectAnomalies_ = parseBool(val);
+            generatorConfig_.injectAnomalies = parseBool(val);
         if (const char *val = std::getenv("ANOMALY_RATE"))
-            anomalyRate_ = parseDoubleOrThrow("ANOMALY_RATE", val);
+        {
+            const double anomalyRate = parseDoubleOrThrow("ANOMALY_RATE", val);
+            generatorConfig_.pointAnomalyRate = anomalyRate;
+            generatorConfig_.scenarioAnomalyRate = anomalyRate;
+        }
+
+        if (const char *val = std::getenv("SIMULATION_DATASET_PATH"))
+            simulationDatasetPath_ = val;
+        if (const char *val = std::getenv("SIMULATION_LABELS_PATH"))
+            simulationLabelsPath_ = val;
+        if (const char *val = std::getenv("SIMULATION_ANOMALY_REPORT_PATH"))
+            simulationAnomalyReportPath_ = val;
+        if (const char *val = std::getenv("ONNX_MODEL_PATH"))
+            onnxModelPath_ = val;
+        if (const char *val = std::getenv("ONNX_ANOMALY_THRESHOLD"))
+            onnxModelConfig_.anomalyThreshold = static_cast<float>(parseDoubleOrThrow("ONNX_ANOMALY_THRESHOLD", val));
+        if (const char *val = std::getenv("RULE_EXTREME_POWER_KW"))
+            ruleBasedDetectorConfig_.extremePowerKw = parseDoubleOrThrow("RULE_EXTREME_POWER_KW", val);
+        if (const char *val = std::getenv("RULE_EXTREME_LIGHT_LUX"))
+            ruleBasedDetectorConfig_.extremeLightLux = parseDoubleOrThrow("RULE_EXTREME_LIGHT_LUX", val);
+        if (const char *val = std::getenv("RULE_SUSTAINED_HIGH_POWER_KW"))
+            ruleBasedDetectorConfig_.sustainedHighPowerKw = parseDoubleOrThrow("RULE_SUSTAINED_HIGH_POWER_KW", val);
+        if (const char *val = std::getenv("RULE_UNATTENDED_POWER_KW"))
+            ruleBasedDetectorConfig_.unattendedPowerKw = parseDoubleOrThrow("RULE_UNATTENDED_POWER_KW", val);
+        if (const char *val = std::getenv("RULE_SUDDEN_POWER_SPIKE_KW"))
+            ruleBasedDetectorConfig_.suddenPowerSpikeKw = parseDoubleOrThrow("RULE_SUDDEN_POWER_SPIKE_KW", val);
+        if (const char *val = std::getenv("RULE_REPEATED_SPIKE_DELTA_KW"))
+            ruleBasedDetectorConfig_.repeatedSpikeDeltaKw = parseDoubleOrThrow("RULE_REPEATED_SPIKE_DELTA_KW", val);
+        if (const char *val = std::getenv("RULE_REPEATED_SPIKE_MIN_COUNT"))
+            ruleBasedDetectorConfig_.repeatedSpikeMinCount = parseIntOrThrow("RULE_REPEATED_SPIKE_MIN_COUNT", val);
+        if (const char *val = std::getenv("DETECTION_HISTORY_WINDOW_MINUTES"))
+            roomStateAggregatorConfig_.historyWindow = std::chrono::minutes(parseIntOrThrow("DETECTION_HISTORY_WINDOW_MINUTES", val));
 
         if (const char *val = std::getenv("DB_HOST"))
             dbHost_ = val;
@@ -316,10 +394,36 @@ namespace dorm_energy::application
             throw std::runtime_error("LOG_LEVEL is not set");
         if (simulationDays_ <= 0)
             throw std::runtime_error("SIMULATION_DAYS must be positive");
-        if (randomSeed_ < 0)
+        if (generatorConfig_.seed < 0)
             throw std::runtime_error("RANDOM_SEED must be non-negative");
-        if (anomalyRate_ < 0.0 || anomalyRate_ > 1.0)
+        if (generatorConfig_.pointAnomalyRate < 0.0 || generatorConfig_.pointAnomalyRate > 1.0)
             throw std::runtime_error("ANOMALY_RATE must be between 0.0 and 1.0");
+        if (generatorConfig_.scenarioAnomalyRate < 0.0 || generatorConfig_.scenarioAnomalyRate > 1.0)
+            throw std::runtime_error("ANOMALY_RATE must be between 0.0 and 1.0");
+        if (simulationDatasetPath_.empty())
+            throw std::runtime_error("SIMULATION_DATASET_PATH is required");
+        if (simulationLabelsPath_.empty())
+            throw std::runtime_error("SIMULATION_LABELS_PATH is required");
+        if (simulationAnomalyReportPath_.empty())
+            throw std::runtime_error("SIMULATION_ANOMALY_REPORT_PATH is required");
+        if (onnxModelPath_.empty())
+            throw std::runtime_error("ONNX_MODEL_PATH is required");
+        if (onnxModelConfig_.anomalyThreshold <= 0.0f)
+            throw std::runtime_error("ONNX_ANOMALY_THRESHOLD must be greater than 0");
+        if (roomStateAggregatorConfig_.historyWindow <= std::chrono::minutes{0})
+            throw std::runtime_error("DETECTION_HISTORY_WINDOW_MINUTES must be greater than 0");
+    }
+
+    void AppConfig::validateForCommand(
+        cli::CommandType commandType) const
+    {
+        validate();
+
+        if (commandType != cli::CommandType::Daemon)
+        {
+            return;
+        }
+
         if (dbHost_.empty())
             throw std::runtime_error("DB_HOST is required");
         if (dbPort_.empty())

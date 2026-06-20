@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dorm_energy/application/cli/command_options.hpp"
+#include "dorm_energy/application/cli/parsed_command.hpp"
 #include "dorm_energy/application/commands/icommand.hpp"
 #include "dorm_energy/application/config/app_config.hpp"
 #include "dorm_energy/application/factories/auth_factory.hpp"
@@ -23,10 +23,12 @@ namespace dorm_energy::application::factories
     class CommandFactory
     {
     public:
-        explicit CommandFactory(const AppConfig &config,
-                                std::shared_ptr<logging::ILogger> logger);
+        explicit CommandFactory(
+            const AppConfig &config,
+            std::shared_ptr<logging::ILogger> logger);
 
-        std::unique_ptr<ICommand> createCommand(const cli::CommandOptions &options);
+        std::unique_ptr<ICommand> createCommand(
+            const cli::ParsedCommand &options);
 
     private:
         const AppConfig &config_;
