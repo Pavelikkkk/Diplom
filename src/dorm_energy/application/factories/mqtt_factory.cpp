@@ -15,7 +15,6 @@ namespace dorm_energy::application::factories
         if (!mqttClient_)
         {
             mqttClient_ = std::make_shared<mqtt::MqttClient>();
-            mqttClient_->setMode(mqtt::MqttMode::Real);
         }
 
         return mqttClient_;

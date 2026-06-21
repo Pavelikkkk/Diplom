@@ -4,10 +4,10 @@
 
 #include <memory>
 
-namespace dorm_energy::application
+namespace dorm_energy::notification
 {
     class INotifier;
-} // namespace dorm_energy::application
+} // namespace dorm_energy::notification
 
 namespace dorm_energy::application::factories
 {
@@ -17,7 +17,7 @@ namespace dorm_energy::application::factories
         explicit NotificationFactory(
             const AppConfig &config);
 
-        std::unique_ptr<INotifier> create() const;
+        std::unique_ptr<notification::INotifier> create() const;
 
     private:
         const AppConfig &config_;

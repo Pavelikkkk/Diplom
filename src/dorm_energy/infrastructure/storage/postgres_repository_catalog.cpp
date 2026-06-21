@@ -3,7 +3,8 @@
 namespace dorm_energy::storage
 {
 
-    std::vector<storage::DeviceDto> PostgresMeasurementRepository::getDevices(int organizationId)
+    std::vector<storage::DeviceDto> PostgresMeasurementRepository::getDevices(
+        int organizationId)
     {
         std::vector<DeviceDto> result;
 
@@ -66,8 +67,8 @@ namespace dorm_energy::storage
         return result;
     }
 
-    std::vector<storage::BuildingDto>
-    PostgresMeasurementRepository::getBuildings(int organizationId)
+    std::vector<storage::BuildingDto> PostgresMeasurementRepository::getBuildings(
+        int organizationId)
     {
         std::vector<BuildingDto> result;
 
@@ -101,7 +102,8 @@ namespace dorm_energy::storage
         return result;
     }
 
-    std::vector<storage::RoomDto> PostgresMeasurementRepository::getRooms(int organizationId)
+    std::vector<storage::RoomDto> PostgresMeasurementRepository::getRooms(
+        int organizationId)
     {
         std::vector<RoomDto> result;
 
@@ -139,10 +141,11 @@ namespace dorm_energy::storage
         return result;
     }
 
-    int PostgresMeasurementRepository::createBuildingForOrganization(int organizationId,
-                                                                     const std::string &name,
-                                                                     const std::string &address,
-                                                                     const std::string &description)
+    int PostgresMeasurementRepository::createBuildingForOrganization(
+        int organizationId,
+        const std::string &name,
+        const std::string &address,
+        const std::string &description)
     {
         pqxx::work txn(*connection_);
 
@@ -171,10 +174,11 @@ namespace dorm_energy::storage
         return row["id"].as<int>();
     }
 
-    int PostgresMeasurementRepository::createRoomForBuilding(int buildingId,
-                                                             const std::string &roomName,
-                                                             const std::string &roomType,
-                                                             int floorNumber)
+    int PostgresMeasurementRepository::createRoomForBuilding(
+        int buildingId,
+        const std::string &roomName,
+        const std::string &roomType,
+        int floorNumber)
     {
         pqxx::work txn(*connection_);
 
@@ -203,11 +207,12 @@ namespace dorm_energy::storage
         return row["id"].as<int>();
     }
 
-    bool PostgresMeasurementRepository::createDeviceForRoom(const std::string &deviceId,
-                                                            const std::string &deviceName,
-                                                            const std::string &deviceModel,
-                                                            const std::string &firmwareVersion,
-                                                            int roomId)
+    bool PostgresMeasurementRepository::createDeviceForRoom(
+        const std::string &deviceId,
+        const std::string &deviceName,
+        const std::string &deviceModel,
+        const std::string &firmwareVersion,
+        int roomId)
     {
         pqxx::work txn(*connection_);
 

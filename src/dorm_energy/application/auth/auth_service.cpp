@@ -1,72 +1,116 @@
 #include "dorm_energy/application/auth/auth_service.hpp"
 
+#include "dorm_energy/domain/storage/dto/user_dto.hpp"
+
 #include <stdexcept>
+#include <utility>
 
-AuthService::AuthService(std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository,
-                         std::shared_ptr<IPasswordHasher> passwordHasher,
-                         std::shared_ptr<IJwtService> jwtService)
-    : repository_(std::move(repository)), passwordHasher_(std::move(passwordHasher)),
-      jwtService_(std::move(jwtService))
+namespace dorm_energy::auth
 {
-}
-
-int AuthService::registerUser(const std::string &username, const std::string &email,
-                              const std::string &password, const std::string &accountType)
-{
-    if (username.size() < 3)
+    namespace
     {
-        throw std::runtime_error("Username must be at least 3 characters");
+        void validateRegisterRequest(
+            const RegisterRequest &request)
+        {
+            if (request.username.size() < 3)
+            {
+                throw std::runtime_error("Username must be at least 3 characters");
+            }
+
+            if (request.email.empty() || request.email.find('@') == std::string::npos)
+            {
+                throw std::runtime_error("Invalid email");
+            }
+
+            if (request.password.size() < 8)
+            {
+                throw std::runtime_error("Password must be at least 8 characters");
+            }
+        }
+
+        std::string normalizeAccountType(
+            const std::string &accountType)
+        {
+            return accountType == "BUSINESS" ? "BUSINESS" : "PERSONAL";
+        }
     }
 
-    if (email.empty() || email.find('@') == std::string::npos)
+    AuthService::AuthService(
+        std::shared_ptr<storage::IUserRepository> repository,
+        std::shared_ptr<IPasswordHasher> passwordHasher,
+        std::shared_ptr<IJwtService> jwtService)
+        : repository_(std::move(repository)),
+          passwordHasher_(std::move(passwordHasher)),
+          jwtService_(std::move(jwtService))
     {
-        throw std::runtime_error("Invalid email");
+        if (!repository_)
+        {
+            throw std::invalid_argument("repository must not be null");
+        }
+
+        if (!passwordHasher_)
+        {
+            throw std::invalid_argument("passwordHasher must not be null");
+        }
+
+        if (!jwtService_)
+        {
+            throw std::invalid_argument("jwtService must not be null");
+        }
     }
 
-    if (password.size() < 8)
+    int AuthService::registerUser(
+        const RegisterRequest &request)
     {
-        throw std::runtime_error("Password must be at least 8 characters");
+        validateRegisterRequest(request);
+
+        const auto existing = repository_->findUserByEmail(request.email);
+
+        if (existing.has_value())
+        {
+            throw std::runtime_error("User already exists");
+        }
+
+        UserDto user;
+        user.username = request.username;
+        user.email = request.email;
+        user.passwordHash = passwordHasher_->hash(request.password);
+        user.role = "USER";
+        user.organizationId = 0;
+        user.accountType = normalizeAccountType(request.accountType);
+
+        return repository_->createUser(user);
     }
 
-    auto existing = repository_->findUserByEmail(email);
-
-    if (existing.has_value())
+    AuthResponse AuthService::loginUser(
+        const LoginRequest &request)
     {
-        throw std::runtime_error("User already exists");
+        const auto user = repository_->findUserByEmail(request.email);
+
+        if (!user.has_value())
+        {
+            throw std::runtime_error("Invalid credentials");
+        }
+
+        const bool valid = passwordHasher_->verify(request.password, user->passwordHash);
+
+        if (!valid)
+        {
+            throw std::runtime_error("Invalid credentials");
+        }
+
+        AuthResponse response;
+        response.token = jwtService_->generateToken(
+            user->id,
+            user->email,
+            user->role);
+
+        return response;
     }
 
-    UserDto user;
-
-    user.username = username;
-    user.email = email;
-    user.passwordHash = passwordHasher_->hash(password);
-    user.role = "USER";
-    user.organizationId = 0;
-    user.accountType = accountType == "BUSINESS" ? "BUSINESS" : "PERSONAL";
-
-    return repository_->createUser(user);
-}
-
-std::string AuthService::loginUser(const std::string &email, const std::string &password)
-{
-    auto user = repository_->findUserByEmail(email);
-
-    if (!user.has_value())
+    UserClaims AuthService::validateToken(
+        const std::string &token)
     {
-        throw std::runtime_error("Invalid credentials");
+        return jwtService_->validateToken(token);
     }
-
-    const bool valid = passwordHasher_->verify(password, user->passwordHash);
-
-    if (!valid)
-    {
-        throw std::runtime_error("Invalid credentials");
-    }
-
-    return jwtService_->generateToken(user->id, user->email, user->role);
-}
-
-UserClaims AuthService::validateToken(const std::string &token)
-{
-    return jwtService_->validateToken(token);
-}
+} // namespace dorm_energy::auth

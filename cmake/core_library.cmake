@@ -11,8 +11,6 @@ add_library(dorm_energy_core STATIC
     # Infrastructure
     src/dorm_energy/infrastructure/logging/spdlog_logger.cpp
     src/dorm_energy/infrastructure/simulation/synthetic_data_generator.cpp
-    src/dorm_energy/infrastructure/notifier/console_notifier.cpp
-    src/dorm_energy/infrastructure/notifier/telegram_config.cpp
     src/dorm_energy/infrastructure/notifier/telegram_notifier.cpp
     src/dorm_energy/infrastructure/handlers/message_handler.cpp
     src/dorm_energy/infrastructure/cli/cli_parser.cpp
@@ -20,6 +18,7 @@ add_library(dorm_energy_core STATIC
     src/dorm_energy/infrastructure/mqtt/message_parser.cpp
     src/dorm_energy/infrastructure/storage/postgres_repository.cpp
     src/dorm_energy/infrastructure/storage/postgres_repository_admin.cpp
+    src/dorm_energy/infrastructure/storage/postgres_repository_anomalies.cpp
     src/dorm_energy/infrastructure/storage/postgres_repository_analytics.cpp
     src/dorm_energy/infrastructure/storage/postgres_repository_catalog.cpp
     src/dorm_energy/infrastructure/storage/postgres_repository_users.cpp
@@ -33,6 +32,7 @@ add_library(dorm_energy_core STATIC
     src/dorm_energy/infrastructure/detection/onnx_detector.cpp
     src/dorm_energy/infrastructure/detection/hybrid_detector.cpp
     src/dorm_energy/infrastructure/web/controllers/admin_controller.cpp
+    src/dorm_energy/infrastructure/web/controllers/account_controller.cpp
     src/dorm_energy/infrastructure/web/controllers/analytics_controller.cpp
     src/dorm_energy/infrastructure/web/controllers/anomalies_controller.cpp
     src/dorm_energy/infrastructure/web/controllers/auth_controller.cpp
@@ -42,9 +42,10 @@ add_library(dorm_energy_core STATIC
     src/dorm_energy/infrastructure/web/middleware/cors_middleware.cpp
     src/dorm_energy/infrastructure/web/routes/route_registrar.cpp
     src/dorm_energy/infrastructure/web/server/web_server.cpp
+    src/dorm_energy/infrastructure/web/utils/dto_json_mapper.cpp
     src/dorm_energy/infrastructure/web/utils/json_response.cpp
     src/dorm_energy/infrastructure/auth/jwt_service.cpp
-    src/dorm_energy/infrastructure/auth/openssl_password_hasher.cpp
+    src/dorm_energy/infrastructure/auth/bcrypt_password_hasher.cpp
 
     # Application
     src/dorm_energy/application/config/app_config.cpp
@@ -65,7 +66,8 @@ add_library(dorm_energy_core STATIC
     src/dorm_energy/application/application_builder.cpp
     src/dorm_energy/application/application.cpp
     src/dorm_energy/application/runtime.cpp
-    src/dorm_energy/application/notifier_service.cpp
+    src/dorm_energy/application/notification/notification_message_factory.cpp
+    src/dorm_energy/application/notification/notifier_service.cpp
     src/dorm_energy/application/auth/auth_service.cpp
 )
 
@@ -88,5 +90,6 @@ target_link_libraries(dorm_energy_core
         CURL::libcurl
         Drogon::Drogon
         jwt-cpp::jwt-cpp
+        ${BCRYPT_LIBRARY}
         ${ONNXRUNTIME_LIB}
 )

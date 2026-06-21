@@ -13,6 +13,7 @@ find_package(CURL CONFIG REQUIRED)
 find_package(Drogon CONFIG REQUIRED)
 find_package(jwt-cpp CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
+find_library(BCRYPT_LIBRARY bcrypt REQUIRED)
 
 set(ONNXRUNTIME_ROOT
     ${PROJECT_SOURCE_DIR}/third_party/onnxruntime)

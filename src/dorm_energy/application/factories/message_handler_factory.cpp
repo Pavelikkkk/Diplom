@@ -9,13 +9,14 @@ namespace dorm_energy::application::factories
 {
     std::unique_ptr<IMessageHandler> MessageHandlerFactory::create(
         std::unique_ptr<detection::IStateDetector> detector,
-        std::shared_ptr<storage::IMeasurementRepository> repository,
-        std::unique_ptr<INotifier> notifier,
+        const RepositoryPorts &repositories,
+        std::unique_ptr<notification::INotifier> notifier,
         std::shared_ptr<detection::RoomStateAggregator> aggregator) const
     {
         return std::make_unique<handlers::MessageHandler>(
             std::move(detector),
-            std::move(repository),
+            repositories.measurements,
+            repositories.anomalies,
             std::move(notifier),
             std::move(aggregator));
     }

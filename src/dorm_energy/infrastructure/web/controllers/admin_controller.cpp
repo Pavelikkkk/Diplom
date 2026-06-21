@@ -11,12 +11,13 @@ namespace dorm_energy::web
 {
     void registerAdminRoutes(const WebContext &context)
     {
-        auto repository = context.repository;
-        auto auth = AuthMiddleware(repository, context.authService);
+        auto adminRepository = context.adminRepository;
+        auto catalogRepository = context.catalogRepository;
+        auto auth = AuthMiddleware(context.userRepository, context.authService);
 
         drogon::app().registerHandler(
             "/api/admin/overview",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [adminRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
                 Json::Value json;
@@ -25,7 +26,7 @@ namespace dorm_energy::web
                 try
                 {
                     auth.requireAdmin(req);
-                    json = repository->getAdminOverview();
+                    json = adminRepository->getAdminOverview();
                     json["success"] = true;
                 }
                 catch (const std::exception &ex)
@@ -40,7 +41,7 @@ namespace dorm_energy::web
 
         drogon::app().registerHandler(
             "/api/admin/buildings",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [catalogRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
                 Json::Value json;
@@ -57,7 +58,7 @@ namespace dorm_energy::web
                         throw std::runtime_error("Invalid JSON body");
                     }
 
-                    auto id = repository->createBuildingForOrganization(
+                    auto id = catalogRepository->createBuildingForOrganization(
                         (*body)["organizationId"].asInt(), (*body)["name"].asString(),
                         (*body)["address"].asString(), (*body)["description"].asString());
 
@@ -76,7 +77,7 @@ namespace dorm_energy::web
 
         drogon::app().registerHandler(
             "/api/admin/rooms",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [catalogRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
                 Json::Value json;
@@ -93,7 +94,7 @@ namespace dorm_energy::web
                         throw std::runtime_error("Invalid JSON body");
                     }
 
-                    auto id = repository->createRoomForBuilding(
+                    auto id = catalogRepository->createRoomForBuilding(
                         (*body)["buildingId"].asInt(), (*body)["roomName"].asString(),
                         (*body)["roomType"].asString(), (*body)["floorNumber"].asInt());
 
@@ -112,7 +113,7 @@ namespace dorm_energy::web
 
         drogon::app().registerHandler(
             "/api/admin/devices",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [catalogRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
                 Json::Value json;
@@ -129,7 +130,7 @@ namespace dorm_energy::web
                         throw std::runtime_error("Invalid JSON body");
                     }
 
-                    repository->createDeviceForRoom(
+                    catalogRepository->createDeviceForRoom(
                         (*body)["deviceId"].asString(), (*body)["deviceName"].asString(),
                         (*body)["deviceModel"].asString(), (*body)["firmwareVersion"].asString(),
                         (*body)["roomId"].asInt());

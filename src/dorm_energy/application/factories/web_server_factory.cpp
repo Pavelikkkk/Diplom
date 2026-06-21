@@ -9,12 +9,17 @@ namespace dorm_energy::application::factories
 {
     std::shared_ptr<web::WebServer> WebServerFactory::create(
         std::shared_ptr<detection::RoomStateAggregator> aggregator,
-        std::shared_ptr<storage::IMeasurementRepository> repository,
-        std::shared_ptr<::AuthService> authService) const
+        const RepositoryPorts &repositories,
+        std::shared_ptr<dorm_energy::auth::AuthService> authService) const
     {
         return std::make_shared<web::WebServer>(
             std::move(aggregator),
-            std::move(repository),
+            repositories.admin,
+            repositories.anomalies,
+            repositories.dashboard,
+            repositories.catalog,
+            repositories.users,
+            repositories.subscriptions,
             std::move(authService));
     }
 } // namespace dorm_energy::application::factories

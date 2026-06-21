@@ -2,7 +2,7 @@
 #pragma once
 
 #include "dorm_energy/application/commands/icommand.hpp"
-#include "dorm_energy/application/config/app_config.hpp"
+#include "dorm_energy/application/config/mqtt_config.hpp"
 
 #include "dorm_energy/application/imessage_handler.hpp"
 #include "dorm_energy/domain/logging/ilogger.hpp"
@@ -19,7 +19,8 @@ namespace dorm_energy::application
     {
     public:
         explicit DaemonCommand(
-            std::shared_ptr<dorm_energy::logging::ILogger> logger, const AppConfig &config,
+            std::shared_ptr<dorm_energy::logging::ILogger> logger,
+            MqttConfig mqttConfig,
             std::shared_ptr<dorm_energy::mqtt::IMqttConnection> mqttConnection,
             std::shared_ptr<dorm_energy::mqtt::IMqttSubscription> mqttSubscription,
             std::shared_ptr<dorm_energy::mqtt::IMqttMessageDispatcher> mqttDispatcher,
@@ -30,8 +31,9 @@ namespace dorm_energy::application
         int execute() override;
 
     private:
+        MqttConfig mqttConfig_;
+
         std::shared_ptr<dorm_energy::logging::ILogger> logger_;
-        const AppConfig &config_; // перенести выше для красоты
 
         std::shared_ptr<dorm_energy::mqtt::IMqttConnection> mqtt_connection_;
         std::shared_ptr<dorm_energy::mqtt::IMqttSubscription> mqtt_subscription_;
@@ -40,6 +42,10 @@ namespace dorm_energy::application
         std::unique_ptr<application::IMessageHandler> message_handler_;
 
         std::shared_ptr<dorm_energy::web::WebServer> web_server_;
+
+        bool stopped_{false};
+
+        void shutdown();
     };
 
 } // namespace dorm_energy::application

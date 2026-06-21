@@ -1,104 +1,156 @@
 #include "dorm_energy/infrastructure/handlers/message_handler.hpp"
+
+#include "dorm_energy/application/notification/notification_message_factory.hpp"
 #include "dorm_energy/domain/detection/detection_context.hpp"
 
-#include <fmt/format.h>
-#include <iostream>
+#include <stdexcept>
+#include <utility>
 
 namespace dorm_energy::handlers
 {
+    namespace
+    {
+        constexpr std::size_t BatchThreshold = 100;
+    }
 
     MessageHandler::MessageHandler(
-        std::unique_ptr<dorm_energy::detection::IStateDetector> detector,
-        std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository,
-        std::unique_ptr<dorm_energy::application::INotifier> notifier,
-        std::shared_ptr<dorm_energy::detection::RoomStateAggregator> aggregator)
-        : detector_(std::move(detector)), repository_(std::move(repository)),
-          notifier_(std::move(notifier)), aggregator_(std::move(aggregator))
+        std::unique_ptr<detection::IStateDetector> detector,
+        std::shared_ptr<storage::IMeasurementRepository> measurementRepository,
+        std::shared_ptr<storage::IAnomalyRepository> anomalyRepository,
+        std::unique_ptr<notification::INotifier> notifier,
+        std::shared_ptr<detection::RoomStateAggregator> aggregator)
+        : detector_(std::move(detector)),
+          measurementRepository_(std::move(measurementRepository)),
+          anomalyRepository_(std::move(anomalyRepository)),
+          notifier_(std::move(notifier)),
+          aggregator_(std::move(aggregator))
     {
-        if (!detector_ || !repository_ || !notifier_ || !aggregator_)
+        if (!detector_)
         {
-            throw std::invalid_argument("MessageHandler: all dependencies must be provided");
+            throw std::invalid_argument("MessageHandler: detector must not be null");
+        }
+
+        if (!measurementRepository_)
+        {
+            throw std::invalid_argument("MessageHandler: measurementRepository must not be null");
+        }
+
+        if (!anomalyRepository_)
+        {
+            throw std::invalid_argument("MessageHandler: anomalyRepository must not be null");
+        }
+
+        if (!notifier_)
+        {
+            throw std::invalid_argument("MessageHandler: notifier must not be null");
+        }
+
+        if (!aggregator_)
+        {
+            throw std::invalid_argument("MessageHandler: aggregator must not be null");
         }
     }
 
-    bool MessageHandler::handle(const core::SensorReading &reading)
+    bool MessageHandler::handle(
+        const core::SensorReading &reading)
     {
         batch_.push_back(reading);
 
-        constexpr std::size_t BATCH_THRESHOLD = 100;
-
-        if (batch_.size() >= BATCH_THRESHOLD)
+        if (batch_.size() >= BatchThreshold)
         {
             persistCurrentBatch();
         }
 
-        auto state = aggregator_->update(reading);
+        const auto updateResult =
+            aggregator_->update(reading);
 
-        if (!state)
+        if (updateResult.health != detection::SensorHealthStatus::Ok)
         {
             return true;
         }
 
+        if (!updateResult.state.has_value())
+        {
+            return true;
+        }
+
+        const auto &state =
+            updateResult.state.value();
+
         detection::DetectionContext context;
+        context.current = state;
+        const auto &history = aggregator_->getHistory(state.deviceId);
+        context.history = &history;
 
-        context.current = *state;
+        const auto anomalyInfo =
+            detector_->detect(context);
 
-        context.history = &aggregator_->getHistory(state->deviceId);
-
-        auto anomalyInfo = detector_->detect(context);
-
-        aggregator_->commitState(*state);
+        aggregator_->commitState(state);
 
         if (!anomalyInfo.isAnomaly)
         {
-            tracker_.resolveRoom(state->deviceId);
+            tracker_.resolveRoom(state.deviceId);
 
             return true;
         }
 
-        if (!tracker_.shouldReport(*state, anomalyInfo))
+        if (!tracker_.shouldReport(state, anomalyInfo))
         {
             return true;
         }
 
-        repository_->saveAnomaly(reading, anomalyInfo.anomalyType, anomalyInfo.severity,
-                                 anomalyInfo.description, anomalyInfo.score);
+        anomalyRepository_->saveAnomaly(
+            reading,
+            anomalyInfo.anomalyType,
+            anomalyInfo.severity,
+            anomalyInfo.description,
+            anomalyInfo.score);
 
-        notifier_->sendAlert(*state, anomalyInfo);
+        const auto notification =
+            application::makeAnomalyNotification(
+                state,
+                anomalyInfo);
+
+        notifier_->send(notification);
 
         return true;
     }
 
-    std::size_t MessageHandler::handleBatch(const std::vector<core::SensorReading> &readings)
+    std::size_t MessageHandler::handleBatch(
+        const std::vector<core::SensorReading> &readings)
     {
         if (readings.empty())
+        {
             return 0;
+        }
 
         std::size_t processed = 0;
 
         for (const auto &reading : readings)
         {
-            handle(reading);
-            ++processed;
+            if (handle(reading))
+            {
+                ++processed;
+            }
         }
 
         return processed;
     }
 
-    void MessageHandler::flush() { persistCurrentBatch(); }
+    void MessageHandler::flush()
+    {
+        persistCurrentBatch();
+    }
 
     void MessageHandler::persistCurrentBatch()
     {
         if (batch_.empty())
+        {
             return;
+        }
 
-        std::size_t saved = repository_->saveBatch(batch_);
-
-        std::cout << fmt::format(
-            "[MessageHandler] Saved {} readings to repository (batch size: {})\n", saved,
-            batch_.size());
+        measurementRepository_->saveBatch(batch_);
 
         batch_.clear();
     }
-
 } // namespace dorm_energy::handlers

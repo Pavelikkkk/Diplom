@@ -4,9 +4,9 @@
 #include <chrono>
 #include <fmt/chrono.h>
 #include <fmt/format.h>
-#include <iostream>
 #include <pqxx/params>
 #include <pqxx/stream_to>
+#include <spdlog/spdlog.h>
 #include <thread>
 #include <unordered_set>
 
@@ -14,12 +14,14 @@ namespace dorm_energy::storage
 {
 
     PostgresMeasurementRepository::PostgresMeasurementRepository(
-        const std::string &connectionString, std::size_t maxBufferSize)
-        : connectionString_(connectionString), maxBufferSize_(maxBufferSize)
+        const std::string &connectionString,
+        std::size_t maxBufferSize)
+        : connectionString_(connectionString),
+          maxBufferSize_(maxBufferSize)
     {
         connect();
-        std::cout << "[PostgresRepository] Successfully connected to TimescaleDB (buffer size = "
-                  << maxBufferSize << ")\n";
+        spdlog::info("[PostgresRepository] Successfully connected to TimescaleDB (buffer size = {})",
+                     maxBufferSize);
     }
 
     PostgresMeasurementRepository::~PostgresMeasurementRepository()
@@ -27,7 +29,7 @@ namespace dorm_energy::storage
         flush();
         if (connection_ && connection_->is_open())
         {
-            std::cout << "[PostgresRepository] Database connection closed\n";
+            spdlog::info("[PostgresRepository] Database connection closed");
         }
     }
 
@@ -44,15 +46,15 @@ namespace dorm_energy::storage
         {
             try
             {
-                std::cout << "[PostgresRepository] Reconnect attempt " << attempt << "/"
-                          << maxAttempts << "...\n";
+                spdlog::info("[PostgresRepository] Reconnect attempt {}/{}...", attempt,
+                             maxAttempts);
                 connect();
-                std::cout << "[PostgresRepository] Reconnected successfully\n";
+                spdlog::info("[PostgresRepository] Reconnected successfully");
                 return true;
             }
             catch (const std::exception &e)
             {
-                std::cerr << "[PostgresRepository] Reconnect failed: " << e.what() << std::endl;
+                spdlog::error("[PostgresRepository] Reconnect failed: {}", e.what());
                 if (attempt < maxAttempts)
                 {
                     auto backoff = std::chrono::seconds(1 << (attempt - 1));
@@ -63,7 +65,7 @@ namespace dorm_energy::storage
         return false;
     }
 
-    bool PostgresMeasurementRepository::save(const core::SensorReading &reading)
+    bool PostgresMeasurementRepository::saveReading(const core::SensorReading &reading)
     {
         return saveBatch({reading}) == 1;
     }
@@ -111,8 +113,7 @@ namespace dorm_energy::storage
 
             for (const auto &reading : readings)
             {
-                if (knownDeviceIds_.contains(reading.deviceId) ||
-                    seenInBatch.contains(reading.deviceId))
+                if (knownDeviceIds_.contains(reading.deviceId) || seenInBatch.contains(reading.deviceId))
                 {
                     continue;
                 }
@@ -136,7 +137,8 @@ namespace dorm_energy::storage
         }
     }
 
-    void PostgresMeasurementRepository::doFlush(const std::vector<core::SensorReading> &readings)
+    void PostgresMeasurementRepository::doFlush(
+        const std::vector<core::SensorReading> &readings)
     {
         if (readings.empty())
             return;
@@ -169,9 +171,7 @@ namespace dorm_energy::storage
                         unit TEXT
                     ) ON COMMIT DROP)");
 
-                const std::vector<std::string> columns{
-                    "recorded_at", "device_id", "sensor_type", "numeric_value", "bool_value",
-                    "unit"};
+                const std::vector<std::string> columns{"recorded_at", "device_id", "sensor_type", "numeric_value", "bool_value", "unit"};
                 auto stream = pqxx::stream_to::table(txn, "staging_sensor_readings", columns);
 
                 for (const auto &r : readings)
@@ -196,63 +196,21 @@ namespace dorm_energy::storage
             txn.commit();
             markDevicesKnown(unknownDeviceIds);
 
-            std::cout << fmt::format("[Postgres] Flushed {} readings ({} inserted)\n",
-                                     readings.size(), insertResult.affected_rows());
+            spdlog::info("[Postgres] Flushed {} readings ({} inserted)", readings.size(),
+                         insertResult.affected_rows());
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[Postgres] Critical flush error: " << e.what() << std::endl;
+            spdlog::error("[Postgres] Critical flush error: {}", e.what());
 
             std::lock_guard<std::mutex> lock(bufferMutex_);
             buffer_.insert(buffer_.begin(), readings.begin(), readings.end());
         }
     }
 
-    bool PostgresMeasurementRepository::saveAnomaly(const core::SensorReading &reading,
-                                                    const std::string &anomalyType,
-                                                    core::AlertSeverity severity,
-                                                    const std::string &description, double score)
-    {
-        try
-        {
-            if (!connection_ || !connection_->is_open())
-            {
-                if (!tryReconnect(3))
-                    return false;
-            }
-
-            pqxx::work txn{*connection_};
-
-            std::string ts = fmt::format("{:%Y-%m-%d %H:%M:%S%z}", reading.timestamp);
-            std::optional<bool> boolVal = reading.boolValue;
-
-            ensureDeviceExists(txn, reading.deviceId);
-
-            txn.exec(
-                R"(INSERT INTO anomalies 
-            (recorded_at, device_id, sensor_type, numeric_value, bool_value, unit,
-             anomaly_type, severity, description, score)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10))",
-                pqxx::params{ts, reading.deviceId, reading.sensorType, reading.value, boolVal,
-                             reading.unit, anomalyType, core::toString(severity), description,
-                             score});
-
-            txn.commit();
-
-            std::cout << fmt::format("[Postgres] Anomaly saved: {} - {} ({})\n", anomalyType,
-                                     reading.deviceId, core::toString(severity));
-
-            return true;
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "[Postgres] Save anomaly error: " << e.what() << std::endl;
-            return false;
-        }
-    }
-
-    void PostgresMeasurementRepository::ensureDeviceExists(pqxx::work &txn,
-                                                           const std::string &deviceId)
+    void PostgresMeasurementRepository::ensureDeviceExists(
+        pqxx::work &txn,
+        const std::string &deviceId)
     {
         txn.exec(
             R"(

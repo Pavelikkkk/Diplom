@@ -83,8 +83,7 @@ namespace dorm_energy::simulation
     {
         if (days <= 0)
         {
-            throw std::invalid_argument(
-                "days must be greater than zero");
+            throw std::invalid_argument("days must be greater than zero");
         }
 
         GeneratedDataset dataset;

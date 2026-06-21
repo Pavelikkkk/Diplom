@@ -1,11 +1,12 @@
 #include "dorm_energy/infrastructure/storage/postgres_repository.hpp"
 
-#include <iostream>
+#include <spdlog/spdlog.h>
 
 namespace dorm_energy::storage
 {
 
-    std::optional<UserDto> PostgresMeasurementRepository::findUserByEmail(const std::string &email)
+    std::optional<UserDto> PostgresMeasurementRepository::findUserByEmail(
+        const std::string &email)
     {
         pqxx::work txn(*connection_);
 
@@ -39,15 +40,15 @@ namespace dorm_energy::storage
         dto.email = row["email"].c_str();
         dto.passwordHash = row["password_hash"].c_str();
         dto.role = row["role"].c_str();
-        dto.organizationId =
-            row["organization_id"].is_null() ? 0 : row["organization_id"].as<int>();
+        dto.organizationId = row["organization_id"].is_null() ? 0 : row["organization_id"].as<int>();
         dto.accountType = row["account_type"].c_str();
         dto.telegramChatId = row["telegram_chat_id"].c_str();
 
         return dto;
     }
 
-    std::optional<UserDto> PostgresMeasurementRepository::findUserById(int userId)
+    std::optional<UserDto> PostgresMeasurementRepository::findUserById(
+        int userId)
     {
         pqxx::work txn(*connection_);
 
@@ -81,15 +82,15 @@ namespace dorm_energy::storage
         dto.email = row["email"].c_str();
         dto.passwordHash = row["password_hash"].c_str();
         dto.role = row["role"].c_str();
-        dto.organizationId =
-            row["organization_id"].is_null() ? 0 : row["organization_id"].as<int>();
+        dto.organizationId = row["organization_id"].is_null() ? 0 : row["organization_id"].as<int>();
         dto.accountType = row["account_type"].c_str();
         dto.telegramChatId = row["telegram_chat_id"].c_str();
 
         return dto;
     }
 
-    int PostgresMeasurementRepository::createUser(const UserDto &user)
+    int PostgresMeasurementRepository::createUser(
+        const UserDto &user)
     {
         try
         {
@@ -176,60 +177,15 @@ namespace dorm_energy::storage
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "CREATE USER ERROR: " << ex.what() << std::endl;
+            spdlog::error("CREATE USER ERROR: {}", ex.what());
 
             throw;
         }
     }
 
-    std::optional<UserDto> PostgresMeasurementRepository::getUserById(int userId)
-    {
-        pqxx::work txn(*connection_);
-
-        auto rows = txn.exec_params(
-            R"(
-            SELECT
-                id,
-                username,
-                email,
-                password_hash,
-                role,
-                organization_id,
-                account_type,
-                COALESCE(telegram_chat_id, '') AS telegram_chat_id
-            FROM users
-            WHERE id = $1
-            )",
-            userId);
-
-        if (rows.empty())
-        {
-            return std::nullopt;
-        }
-
-        UserDto dto;
-
-        dto.id = rows[0]["id"].as<int>();
-
-        dto.username = rows[0]["username"].c_str();
-
-        dto.email = rows[0]["email"].c_str();
-
-        dto.passwordHash = rows[0]["password_hash"].c_str();
-
-        dto.role = rows[0]["role"].c_str();
-
-        dto.organizationId = rows[0]["organization_id"].as<int>(0);
-
-        dto.accountType = rows[0]["account_type"].c_str();
-
-        dto.telegramChatId = rows[0]["telegram_chat_id"].c_str();
-
-        return dto;
-    }
-
-    bool PostgresMeasurementRepository::updateUserTelegramChatId(int userId,
-                                                                 const std::string &telegramChatId)
+    bool PostgresMeasurementRepository::updateUserTelegramChatId(
+        int userId,
+        const std::string &telegramChatId)
     {
         pqxx::work txn(*connection_);
 
@@ -247,7 +203,8 @@ namespace dorm_energy::storage
         return result.affected_rows() == 1;
     }
 
-    Json::Value PostgresMeasurementRepository::getUserSubscription(int userId)
+    SubscriptionDto PostgresMeasurementRepository::getUserSubscription(
+        int userId)
     {
         pqxx::work txn(*connection_);
 
@@ -266,27 +223,20 @@ namespace dorm_energy::storage
             )",
             userId);
 
-        Json::Value json;
-
         if (rows.empty())
         {
-            json["plan"] = "STANDARD";
-            json["status"] = "ACTIVE";
-            json["maxBuildings"] = 0;
-            json["maxRooms"] = 5;
-            json["maxDevices"] = 20;
-            return json;
+            return SubscriptionDto{};
         }
 
         const auto &row = rows[0];
 
-        json["plan"] = row["plan"].c_str();
-        json["status"] = row["status"].c_str();
-        json["maxBuildings"] = row["max_buildings"].as<int>(0);
-        json["maxRooms"] = row["max_rooms"].as<int>(0);
-        json["maxDevices"] = row["max_devices"].as<int>(0);
-
-        return json;
+        return SubscriptionDto{
+            .plan = row["plan"].c_str(),
+            .status = row["status"].c_str(),
+            .maxBuildings = row["max_buildings"].as<int>(0),
+            .maxRooms = row["max_rooms"].as<int>(0),
+            .maxDevices = row["max_devices"].as<int>(0),
+        };
     }
 
 } // namespace dorm_energy::storage

@@ -5,54 +5,65 @@
 
 #include <chrono>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
-using traits = jwt::traits::nlohmann_json;
-
-JwtService::JwtService(const std::string &secret) : secret_(secret)
+namespace dorm_energy::auth
 {
-}
+    namespace
+    {
+        using JwtTraits = jwt::traits::nlohmann_json;
 
-std::string JwtService::generateToken(
-    int userId,
-    const std::string &email,
-    const std::string &role)
-{
+        constexpr const char *Issuer = "dorm-energy";
+    }
 
-    auto token = jwt::create<traits>()
-                     .set_type("JWT")
-                     .set_issuer("dorm-energy")
-                     .set_payload_claim("user_id", jwt::basic_claim<traits>(std::to_string(userId)))
-                     .set_payload_claim("email", jwt::basic_claim<traits>(email))
-                     .set_payload_claim("role", jwt::basic_claim<traits>(role))
-                     .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24))
-                     .sign(jwt::algorithm::hs256{secret_});
+    JwtService::JwtService(
+        std::string secret,
+        int tokenLifetimeHours)
+        : secret_(std::move(secret)),
+          tokenLifetimeHours_(tokenLifetimeHours)
+    {
+        if (secret_.empty())
+        {
+            throw std::invalid_argument("JWT secret must not be empty");
+        }
+        if (tokenLifetimeHours_ <= 0)
+        {
+            throw std::invalid_argument("JWT token lifetime must be positive");
+        }
+    }
 
-    return token;
-}
+    std::string JwtService::generateToken(
+        int userId,
+        const std::string &email,
+        const std::string &role)
+    {
+        return jwt::create<JwtTraits>()
+            .set_type("JWT")
+            .set_issuer(Issuer)
+            .set_payload_claim("user_id", jwt::basic_claim<JwtTraits>(std::to_string(userId)))
+            .set_payload_claim("email", jwt::basic_claim<JwtTraits>(email))
+            .set_payload_claim("role", jwt::basic_claim<JwtTraits>(role))
+            .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(tokenLifetimeHours_))
+            .sign(jwt::algorithm::hs256{secret_});
+    }
 
-UserClaims JwtService::validateToken(
-    const std::string &token)
-{
+    UserClaims JwtService::validateToken(
+        const std::string &token)
+    {
+        const auto decoded = jwt::decode<JwtTraits>(token);
 
-    auto decoded = jwt::decode<traits>(token);
+        const auto verifier = jwt::verify<JwtTraits>()
+                                  .allow_algorithm(jwt::algorithm::hs256{secret_})
+                                  .with_issuer(Issuer);
 
-    auto verifier = jwt::verify<traits>()
-                        .allow_algorithm(jwt::algorithm::hs256{secret_})
-                        .with_issuer("dorm-energy");
+        verifier.verify(decoded);
 
-    verifier.verify(decoded);
+        UserClaims claims;
+        claims.userId = std::stoi(decoded.get_payload_claim("user_id").as_string());
+        claims.email = decoded.get_payload_claim("email").as_string();
+        claims.role = decoded.get_payload_claim("role").as_string();
 
-    UserClaims claims;
-
-    claims.userId = std::stoi(decoded.get_payload_claim("user_id").as_string());
-    claims.email = decoded.get_payload_claim("email").as_string();
-    claims.role = decoded.get_payload_claim("role").as_string();
-
-    return claims;
-}
-int JwtService::extractUserId(const std::string &token)
-{
-    auto claims = validateToken(token);
-
-    return claims.userId;
-}
+        return claims;
+    }
+} // namespace dorm_energy::auth

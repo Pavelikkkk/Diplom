@@ -2,10 +2,14 @@
 #pragma once
 
 #include "dorm_energy/application/cli/command_type.hpp"
+#include "dorm_energy/application/config/database_config.hpp"
 #include "dorm_energy/application/config/generator_config.hpp"
+#include "dorm_energy/application/config/jwt_config.hpp"
+#include "dorm_energy/application/config/mqtt_config.hpp"
 #include "dorm_energy/application/config/onnx_model_config.hpp"
 #include "dorm_energy/application/config/rule_based_detector_config.hpp"
 #include "dorm_energy/application/config/room_state_aggregator_config.hpp"
+#include "dorm_energy/infrastructure/notifier/telegram_config.hpp"
 
 #include <cstddef>
 #include <string>
@@ -41,6 +45,7 @@ namespace dorm_energy::application
         const std::string &getDbPassword() const { return dbPassword_; }
 
         std::size_t getDbMaxBufferSize() const { return dbMaxBufferSize_; }
+        DatabaseConfig getDatabaseConfig() const;
 
         const std::string &getMqttBroker() const { return mqttBroker_; }
         const std::string &getMqttClientId() const { return mqttClientId_; }
@@ -48,6 +53,7 @@ namespace dorm_energy::application
         const std::string &getMqttUsername() const { return mqttUsername_; }
         const std::string &getMqttPassword() const { return mqttPassword_; }
         bool getMqttTlsVerify() const { return mqttTlsVerify_; }
+        MqttConfig getMqttConfig() const;
 
         bool isTelegramEnabled() const { return telegramEnabled_; }
 
@@ -55,11 +61,16 @@ namespace dorm_energy::application
         const std::string &getTelegramBotToken() const { return telegramBotToken_; }
 
         const std::string &getTelegramChatId() const { return telegramChatId_; }
+        notifier::TelegramConfig getTelegramConfig() const;
+
+        const std::string &getJwtSecret() const { return jwtSecret_; }
+        int getJwtTokenLifetimeHours() const { return jwtTokenLifetimeHours_; }
+        JwtConfig getJwtConfig() const;
 
         static AppConfig load();
         static AppConfig loadFromEnvironment();
         static AppConfig loadFromEnvFile(
-        const std::string &filename = ".env");
+            const std::string &filename = ".env");
 
         void overrideFromEnvironment();
 
@@ -75,7 +86,7 @@ namespace dorm_energy::application
         bool verbose_{false}; // -
         std::string logLevel_{"info"};
 
-        int simulationDays_{30};
+        int simulationDays_{60};
         simulation::SyntheticDataGeneratorConfig generatorConfig_{};
         
         std::string simulationDatasetPath_{"../../data/training_dataset.csv"};
@@ -110,6 +121,9 @@ namespace dorm_energy::application
         std::string telegramBotToken_{};
 
         std::string telegramChatId_{};
+
+        std::string jwtSecret_{};
+        int jwtTokenLifetimeHours_{24};
     };
 
 } // namespace dorm_energy::application

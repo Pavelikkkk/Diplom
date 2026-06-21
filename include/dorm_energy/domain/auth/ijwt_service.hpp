@@ -4,15 +4,19 @@
 
 #include <string>
 
-class IJwtService
+namespace dorm_energy::auth
 {
-public:
-    virtual ~IJwtService() = default;
+    class IJwtService
+    {
+    public:
+        virtual ~IJwtService() = default;
 
-    virtual std::string generateToken(int userId, const std::string &email,
-                                      const std::string &role) = 0;
+        virtual std::string generateToken(
+            int userId,
+            const std::string &email,
+            const std::string &role) = 0;
 
-    virtual UserClaims validateToken(const std::string &token) = 0;
-
-    virtual int extractUserId(const std::string &token) = 0;
-};
+        virtual UserClaims validateToken(
+            const std::string &token) = 0;
+    };
+}

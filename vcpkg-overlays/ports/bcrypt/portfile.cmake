@@ -1,0 +1,26 @@
+vcpkg_from_github(
+    OUT_SOURCE_PATH SOURCE_PATH
+    REPO hilch/Bcrypt.cpp
+    REF 0d18b6a99e8c57627910db4ef9a7706c009b12ad
+    SHA512 beddfb1041572f749739caca6bb43d99d2598505cbfcec85ed41e773c7ca21d9b4cbdac49215bf3e7aaa0fe41eccfe4b819cdda6a3e9ad350e44aa3e5b783c0d
+    HEAD_REF master
+)
+
+vcpkg_cmake_configure(
+    SOURCE_PATH "${SOURCE_PATH}"
+    OPTIONS
+        -DBUILD_TESTS=OFF
+)
+
+vcpkg_cmake_build()
+
+file(MAKE_DIRECTORY "${CURRENT_PACKAGES_DIR}/include/bcrypt")
+file(INSTALL "${SOURCE_PATH}/include/bcrypt.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/bcrypt")
+
+file(GLOB BCRYPT_RELEASE_LIBS "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-rel/*.lib")
+file(GLOB BCRYPT_DEBUG_LIBS "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-dbg/*.lib")
+
+file(INSTALL ${BCRYPT_RELEASE_LIBS} DESTINATION "${CURRENT_PACKAGES_DIR}/lib")
+file(INSTALL ${BCRYPT_DEBUG_LIBS} DESTINATION "${CURRENT_PACKAGES_DIR}/debug/lib")
+
+vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE")

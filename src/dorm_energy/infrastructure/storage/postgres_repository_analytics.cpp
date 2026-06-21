@@ -3,55 +3,9 @@
 namespace dorm_energy::storage
 {
 
-    std::vector<storage::AnomalyDto>
-    PostgresMeasurementRepository::getLatestAnomalies(std::size_t limit, int organizationId)
-    {
-        std::vector<AnomalyDto> result;
-
-        pqxx::work txn(*connection_);
-
-        auto rows = txn.exec_params(
-            R"(
-            SELECT
-                anomalies.device_id,
-                anomalies.anomaly_type,
-                anomalies.severity,
-                anomalies.score,
-                anomalies.description,
-                anomalies.detected_at,
-                r.room_name
-            FROM anomalies
-            JOIN devices d
-                ON d.device_id = anomalies.device_id
-            JOIN rooms r
-                ON r.id = d.room_id
-            JOIN buildings b
-                ON b.id = r.building_id
-            WHERE ($2 = 0 OR b.organization_id = $2)
-            ORDER BY detected_at DESC
-            LIMIT $1
-            )",
-            limit, organizationId);
-
-        for (auto const &row : rows)
-        {
-            AnomalyDto dto;
-
-            dto.room = row["room_name"].c_str();
-            dto.type = row["anomaly_type"].c_str();
-            dto.severity = row["severity"].c_str();
-            dto.score = row["score"].as<double>(0.0);
-            dto.description = row["description"].c_str();
-            dto.detectedAt = row["detected_at"].c_str();
-
-            result.push_back(dto);
-        }
-
-        return result;
-    }
-
-    std::vector<storage::PowerPointDto>
-    PostgresMeasurementRepository::getPowerHistory(int hours, int organizationId)
+    std::vector<storage::PowerPointDto> PostgresMeasurementRepository::getPowerHistory(
+        int hours,
+        int organizationId)
     {
         std::vector<PowerPointDto> result;
 
@@ -90,8 +44,9 @@ namespace dorm_energy::storage
         return result;
     }
 
-    std::vector<storage::TopConsumerDto>
-    PostgresMeasurementRepository::getTopConsumers(int limit, int organizationId)
+    std::vector<storage::TopConsumerDto> PostgresMeasurementRepository::getTopConsumers(
+        int limit,
+        int organizationId)
     {
         std::vector<TopConsumerDto> result;
 
@@ -130,8 +85,8 @@ namespace dorm_energy::storage
         return result;
     }
 
-    std::vector<storage::AnomalyStatsDto>
-    PostgresMeasurementRepository::getAnomalyStatistics(int organizationId)
+    std::vector<storage::AnomalyStatsDto> PostgresMeasurementRepository::getAnomalyStatistics(
+        int organizationId)
     {
         std::vector<AnomalyStatsDto> result;
 
@@ -168,8 +123,8 @@ namespace dorm_energy::storage
         return result;
     }
 
-    std::vector<storage::EnergyByRoomDto>
-    PostgresMeasurementRepository::getEnergyByRoom(int organizationId)
+    std::vector<storage::EnergyByRoomDto> PostgresMeasurementRepository::getEnergyByRoom(
+        int organizationId)
     {
         std::vector<EnergyByRoomDto> result;
 
@@ -207,8 +162,8 @@ namespace dorm_energy::storage
         return result;
     }
 
-    std::vector<storage::SeverityStatsDto>
-    PostgresMeasurementRepository::getSeverityDistribution(int organizationId)
+    std::vector<storage::SeverityStatsDto> PostgresMeasurementRepository::getSeverityDistribution(
+        int organizationId)
     {
         std::vector<SeverityStatsDto> result;
 

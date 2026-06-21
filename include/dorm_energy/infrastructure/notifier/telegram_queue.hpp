@@ -1,36 +1,32 @@
 #pragma once
 
-#include "dorm_energy/core/alert_severity.hpp"
-#include "dorm_energy/core/measurement.hpp"
-#include <chrono>
+#include "dorm_energy/infrastructure/notifier/queued_notification.hpp"
+
 #include <mutex>
-#include <string>
 #include <vector>
 
 namespace dorm_energy::notifier
 {
-    struct QueuedAlert
-    {
-        core::SensorReading reading;
-        core::AlertSeverity severity;
-        std::string reason;
-        std::chrono::system_clock::time_point queuedAt;
-    };
-
     class TelegramQueue
     {
     public:
-        static constexpr std::size_t MAX_QUEUE_SIZE = 500;
+        explicit TelegramQueue(
+            std::size_t maxQueueSize = 500);
 
-        void push(const core::SensorReading &reading, core::AlertSeverity severity,
-                  const std::string &reason);
+        void push(
+            const notification::NotificationMessage &message);
 
-        std::vector<QueuedAlert> getAllAndClear();
+        std::vector<QueuedNotification> getAllAndClear();
+
         bool empty() const;
+
         std::size_t size() const;
 
     private:
-        std::vector<QueuedAlert> queue_;
+        std::vector<QueuedNotification> queue_;
+
         mutable std::mutex mutex_;
+
+        std::size_t maxQueueSize_;
     };
 } // namespace dorm_energy::notifier

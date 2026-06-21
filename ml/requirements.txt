@@ -5,3 +5,4 @@ torch
 onnx
 onnxruntime
 onnxscript
+paho-mqtt

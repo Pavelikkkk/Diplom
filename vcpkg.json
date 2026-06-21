@@ -15,6 +15,7 @@
     "paho-mqttpp3",
     "drogon",
     "jwt-cpp",
+    "bcrypt",
     "gtest"
   ],
   "default-features": [],

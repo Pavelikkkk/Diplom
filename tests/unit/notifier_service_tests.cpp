@@ -1,11 +1,10 @@
-#include "dorm_energy/application/notifier_service.hpp"
+#include "dorm_energy/application/notification/notifier_service.hpp"
 
 #include <gtest/gtest.h>
 
-using dorm_energy::application::INotifier;
 using dorm_energy::application::NotifierService;
-using dorm_energy::core::RoomState;
-using dorm_energy::detection::AnomalyInfo;
+using dorm_energy::notification::INotifier;
+using dorm_energy::notification::NotificationMessage;
 
 namespace
 {
@@ -17,20 +16,20 @@ namespace
         {
         }
 
-        bool sendAlert(const RoomState &, const AnomalyInfo &) override
+        bool send(const NotificationMessage &) override
         {
-            ++sendAlertCalls;
+            ++sendCalls;
             return sendResult_;
         }
 
-        std::size_t sendAlerts(const std::vector<RoomState> &states, const AnomalyInfo &) override
+        std::size_t sendBatch(const std::vector<NotificationMessage> &messages) override
         {
-            ++sendAlertsCalls;
-            return sendResult_ ? states.size() : 0U;
+            ++sendBatchCalls;
+            return sendResult_ ? messages.size() : 0U;
         }
 
-        int sendAlertCalls{0};
-        int sendAlertsCalls{0};
+        int sendCalls{0};
+        int sendBatchCalls{0};
 
     private:
         bool sendResult_;
@@ -41,8 +40,8 @@ TEST(NotifierServiceTest, EmptyServiceDoesNotSend)
 {
     NotifierService service;
 
-    EXPECT_FALSE(service.sendAlert(RoomState{}, AnomalyInfo{}));
-    EXPECT_EQ(service.sendAlerts({RoomState{}}, AnomalyInfo{}), 0U);
+    EXPECT_FALSE(service.send(NotificationMessage{}));
+    EXPECT_EQ(service.sendBatch({NotificationMessage{}}), 0U);
 }
 
 TEST(NotifierServiceTest, IgnoresNullNotifiers)
@@ -50,7 +49,7 @@ TEST(NotifierServiceTest, IgnoresNullNotifiers)
     NotifierService service;
     service.addNotifier(nullptr);
 
-    EXPECT_FALSE(service.sendAlert(RoomState{}, AnomalyInfo{}));
+    EXPECT_FALSE(service.send(NotificationMessage{}));
 }
 
 TEST(NotifierServiceTest, SendsAlertToAllNotifiersAndReportsAggregateSuccess)
@@ -64,9 +63,9 @@ TEST(NotifierServiceTest, SendsAlertToAllNotifiersAndReportsAggregateSuccess)
     service.addNotifier(std::move(success));
     service.addNotifier(std::move(failure));
 
-    EXPECT_FALSE(service.sendAlert(RoomState{}, AnomalyInfo{}));
-    EXPECT_EQ(successPtr->sendAlertCalls, 1);
-    EXPECT_EQ(failurePtr->sendAlertCalls, 1);
+    EXPECT_FALSE(service.send(NotificationMessage{}));
+    EXPECT_EQ(successPtr->sendCalls, 1);
+    EXPECT_EQ(failurePtr->sendCalls, 1);
 }
 
 TEST(NotifierServiceTest, SumsBatchResultsAcrossNotifiers)
@@ -75,6 +74,6 @@ TEST(NotifierServiceTest, SumsBatchResultsAcrossNotifiers)
     service.addNotifier(std::make_unique<FakeNotifier>(true));
     service.addNotifier(std::make_unique<FakeNotifier>(true));
 
-    EXPECT_EQ(service.sendAlerts({RoomState{}, RoomState{}}, AnomalyInfo{}), 4U);
-    EXPECT_EQ(service.sendAlerts({}, AnomalyInfo{}), 0U);
+    EXPECT_EQ(service.sendBatch({NotificationMessage{}, NotificationMessage{}}), 4U);
+    EXPECT_EQ(service.sendBatch({}), 0U);
 }

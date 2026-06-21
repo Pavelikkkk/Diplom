@@ -2,12 +2,18 @@
 
 #include <string>
 
-class IPasswordHasher
+namespace dorm_energy::auth
 {
-public:
-    virtual ~IPasswordHasher() = default;
+    class IPasswordHasher
+    {
+    public:
+        virtual ~IPasswordHasher() = default;
 
-    virtual std::string hash(const std::string &password) = 0;
+        virtual std::string hash(
+            const std::string &password) = 0;
 
-    virtual bool verify(const std::string &password, const std::string &hash) = 0;
-};
+        virtual bool verify(
+            const std::string &password,
+            const std::string &hash) = 0;
+    };
+}

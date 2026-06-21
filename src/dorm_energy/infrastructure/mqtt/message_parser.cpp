@@ -1,66 +1,167 @@
 #include "dorm_energy/infrastructure/mqtt/message_parser.hpp"
-#include "dorm_energy/core/measurement.hpp"
 
-#include <nlohmann/json.hpp>
-#include <fmt/format.h>
 #include <chrono>
-#include <iostream>
+#include <nlohmann/json.hpp>
+#include <optional>
+#include <string>
 
 namespace dorm_energy::mqtt
 {
-
-    std::optional<core::SensorReading> MessageParser::parse(const std::string &payload) const
+    namespace
     {
-        if (payload.empty())
+        constexpr std::size_t MaxPayloadSize = 4096;
+
+        std::optional<std::string> readStringField(
+            const nlohmann::json &json,
+            const char *camelCaseName,
+            const char *snakeCaseName)
         {
-            std::cerr << "[MessageParser] Empty payload\n"; //rutime erro
+            if (json.contains(camelCaseName) &&
+                json[camelCaseName].is_string())
+            {
+                return json[camelCaseName].get<std::string>();
+            }
+
+            if (json.contains(snakeCaseName) &&
+                json[snakeCaseName].is_string())
+            {
+                return json[snakeCaseName].get<std::string>();
+            }
+
+            return std::nullopt;
+        }
+
+        std::optional<double> readDoubleField(
+            const nlohmann::json &json,
+            const char *camelCaseName,
+            const char *snakeCaseName)
+        {
+            if (json.contains(camelCaseName) &&
+                json[camelCaseName].is_number())
+            {
+                return json[camelCaseName].get<double>();
+            }
+
+            if (json.contains(snakeCaseName) &&
+                json[snakeCaseName].is_number())
+            {
+                return json[snakeCaseName].get<double>();
+            }
+
+            return std::nullopt;
+        }
+
+        std::optional<bool> readBoolField(
+            const nlohmann::json &json,
+            const char *camelCaseName,
+            const char *snakeCaseName)
+        {
+            if (json.contains(camelCaseName) &&
+                json[camelCaseName].is_boolean())
+            {
+                return json[camelCaseName].get<bool>();
+            }
+
+            if (json.contains(snakeCaseName) &&
+                json[snakeCaseName].is_boolean())
+            {
+                return json[snakeCaseName].get<bool>();
+            }
+
+            return std::nullopt;
+        }
+    }
+
+    std::optional<core::SensorReading>
+    MessageParser::parse(
+        const std::string &payload) const
+    {
+        if (!canParse(payload))
+        {
             return std::nullopt;
         }
 
         try
         {
-            auto j = nlohmann::json::parse(payload);
+            const auto json =
+                nlohmann::json::parse(payload);
+
+            const auto deviceId =
+                readStringField(
+                    json,
+                    "deviceId",
+                    "device_id");
+
+            const auto sensorType =
+                readStringField(
+                    json,
+                    "sensorType",
+                    "sensor_type");
 
             core::SensorReading reading;
-            reading.timestamp = std::chrono::system_clock::now();
+            reading.timestamp =
+                std::chrono::system_clock::now();
+            reading.deviceId = deviceId.value_or("unknown");
+            reading.sensorType = sensorType.value_or("unknown");
 
-            reading.deviceId = j.value("deviceId", j.value("device_id", std::string("unknown")));
-            reading.sensorType = j.value("sensorType", j.value("sensor_type", std::string("unknown")));
+            const auto numericValue =
+                readDoubleField(
+                    json,
+                    "value",
+                    "numeric_value");
 
-            if (j.contains("value") || j.contains("numeric_value"))
+            if (numericValue.has_value())
             {
-                reading.value = j.value("value", j.value("numeric_value", 0.0));
+                reading.value =
+                    numericValue.value();
             }
 
-            if (j.contains("boolValue") || j.contains("bool_value"))
+            const auto boolValue =
+                readBoolField(
+                    json,
+                    "boolValue",
+                    "bool_value");
+
+            if (boolValue.has_value())
             {
-                reading.boolValue = j.value("boolValue", j.value("bool_value", false));
+                reading.boolValue =
+                    boolValue.value();
             }
 
-            reading.unit = j.value("unit", std::string(""));
+            const auto unit =
+                readStringField(
+                    json,
+                    "unit",
+                    "unit");
 
-            std::cout << fmt::format("[MessageParser] Parsed: {} | {} | {:.2f} {}\n",
-                                     reading.deviceId, reading.sensorType, reading.value, reading.unit);
+            if (unit.has_value())
+            {
+                reading.unit =
+                    unit.value();
+            }
 
             return reading;
         }
-        catch (const nlohmann::json::parse_error &e)
+        catch (const nlohmann::json::exception &)
         {
-            std::cerr << "[MessageParser] JSON parse error: " << e.what() << "\nPayload: " << payload << std::endl;
-            return std::nullopt;
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "[MessageParser] Error parsing message: " << e.what() << std::endl;
             return std::nullopt;
         }
     }
 
-    bool MessageParser::canParse(const std::string &payload) const
+    bool MessageParser::canParse(
+        const std::string &payload) const
     {
-        if (payload.empty() || payload.size() > 4096)
+        if (payload.empty())
+        {
             return false;
-        return payload.find('{') != std::string::npos;
-    }
+        }
 
+        if (payload.size() > MaxPayloadSize)
+        {
+            return false;
+        }
+
+        return payload.find('{') != std::string::npos &&
+               payload.find('}') != std::string::npos;
+    }
 } // namespace dorm_energy::mqtt

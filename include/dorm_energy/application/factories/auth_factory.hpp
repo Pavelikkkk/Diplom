@@ -4,11 +4,14 @@
 
 #include <memory>
 
-class AuthService;
+namespace dorm_energy::auth
+{
+    class AuthService;
+}
 
 namespace dorm_energy::storage
 {
-    class IMeasurementRepository;
+    class IUserRepository;
 }
 
 namespace dorm_energy::application::factories
@@ -19,8 +22,8 @@ namespace dorm_energy::application::factories
         explicit AuthFactory(
             const AppConfig &config);
 
-        std::shared_ptr<AuthService> create(
-            std::shared_ptr<storage::IMeasurementRepository> repository) const;
+        std::shared_ptr<dorm_energy::auth::AuthService> create(
+            std::shared_ptr<storage::IUserRepository> repository) const;
 
     private:
         const AppConfig &config_;

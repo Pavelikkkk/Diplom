@@ -279,6 +279,10 @@ namespace dorm_energy::application
                 config.telegramBotToken_ = value;
             else if (key == "TELEGRAM_CHAT_ID")
                 config.telegramChatId_ = value;
+            else if (key == "JWT_SECRET")
+                config.jwtSecret_ = value;
+            else if (key == "JWT_TOKEN_LIFETIME_HOURS")
+                config.jwtTokenLifetimeHours_ = parseIntOrThrow(key, value);
         }
         return config;
     }
@@ -373,6 +377,10 @@ namespace dorm_energy::application
             telegramBotToken_ = val;
         if (const char *val = std::getenv("TELEGRAM_CHAT_ID"))
             telegramChatId_ = val;
+        if (const char *val = std::getenv("JWT_SECRET"))
+            jwtSecret_ = val;
+        if (const char *val = std::getenv("JWT_TOKEN_LIFETIME_HOURS"))
+            jwtTokenLifetimeHours_ = parseIntOrThrow("JWT_TOKEN_LIFETIME_HOURS", val);
     }
 
     std::string AppConfig::getDbConnectionString() const
@@ -386,6 +394,48 @@ namespace dorm_energy::application
             oss << " password=" << dbPassword_;
 
         return oss.str();
+    }
+
+    DatabaseConfig AppConfig::getDatabaseConfig() const
+    {
+        return DatabaseConfig{
+            .host = dbHost_,
+            .port = dbPort_,
+            .name = dbName_,
+            .user = dbUser_,
+            .password = dbPassword_,
+            .maxBufferSize = dbMaxBufferSize_,
+        };
+    }
+
+    MqttConfig AppConfig::getMqttConfig() const
+    {
+        return MqttConfig{
+            .broker = mqttBroker_,
+            .clientId = mqttClientId_,
+            .topic = mqttTopic_,
+            .username = mqttUsername_,
+            .password = mqttPassword_,
+            .tlsVerify = mqttTlsVerify_,
+        };
+    }
+
+    notifier::TelegramConfig AppConfig::getTelegramConfig() const
+    {
+        return notifier::TelegramConfig{
+            .enabled = telegramEnabled_,
+            .botToken = telegramBotToken_,
+            .chatId = telegramChatId_,
+            .maxQueueSize = 500,
+        };
+    }
+
+    JwtConfig AppConfig::getJwtConfig() const
+    {
+        return JwtConfig{
+            .secret = jwtSecret_,
+            .tokenLifetimeHours = jwtTokenLifetimeHours_,
+        };
     }
 
     void AppConfig::validate() const
@@ -434,6 +484,10 @@ namespace dorm_energy::application
             throw std::runtime_error("DB_USER is required");
         if (dbMaxBufferSize_ == 0)
             throw std::runtime_error("DB_MAX_BUFFER_SIZE must be greater than 0");
+        if (jwtSecret_.empty())
+            throw std::runtime_error("JWT_SECRET is required");
+        if (jwtTokenLifetimeHours_ <= 0)
+            throw std::runtime_error("JWT_TOKEN_LIFETIME_HOURS must be greater than 0");
         if (mqttBroker_.empty())
             throw std::runtime_error("MQTT_BROKER is required");
         if (mqttClientId_.empty())
@@ -456,10 +510,12 @@ namespace dorm_energy::application
         dbPassword_.clear();
         mqttPassword_.clear();
         telegramBotToken_.clear();
+        jwtSecret_.clear();
 
         dbPassword_.shrink_to_fit();
         mqttPassword_.shrink_to_fit();
         telegramBotToken_.shrink_to_fit();
+        jwtSecret_.shrink_to_fit();
     }
 
 } // namespace dorm_energy::application

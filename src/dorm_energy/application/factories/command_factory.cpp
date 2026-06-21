@@ -3,8 +3,7 @@
 #include "dorm_energy/application/cli/command_type.hpp"
 #include "dorm_energy/application/commands/daemon_command.hpp"
 #include "dorm_energy/application/commands/simulate_command.hpp"
-#include "dorm_energy/application/inotifier.hpp"
-
+#include "dorm_energy/domain/notification/inotifier.hpp"
 #include <memory>
 #include <utility>
 
@@ -38,20 +37,20 @@ namespace dorm_energy::application::factories
 
         if (options.type == cli::CommandType::Daemon)
         {
-            auto repository = repositoryFactory_.create();
+            auto repositories = repositoryFactory_.create();
             auto aggregator = stateFactory_.createAggregator();
-            auto authService = authFactory_.create(repository);
-            auto webServer = webServerFactory_.create(aggregator, repository, authService);
+            auto authService = authFactory_.create(repositories.users);
+            auto webServer = webServerFactory_.create(aggregator, repositories, authService);
 
             auto messageHandler = messageHandlerFactory_.create(
                 detectionFactory_.create(),
-                repository,
+                repositories,
                 notificationFactory_.create(),
                 aggregator);
 
             return std::make_unique<DaemonCommand>(
                 logger_,
-                config_,
+                config_.getMqttConfig(),
                 mqttFactory_.createConnection(),
                 mqttFactory_.createSubscription(),
                 mqttFactory_.createDispatcher(),

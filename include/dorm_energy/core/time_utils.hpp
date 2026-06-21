@@ -5,4 +5,7 @@
 namespace dorm_energy::core
 {
     int extractLocalHour(TimePoint timestamp);
+
+    std::string formatLocalTimestamp(
+        TimePoint timestamp);
 }

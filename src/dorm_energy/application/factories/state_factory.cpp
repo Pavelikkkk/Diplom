@@ -16,8 +16,7 @@ namespace dorm_energy::application::factories
     {
         if (!aggregator_)
         {
-            aggregator_ = std::make_shared<detection::RoomStateAggregator>(
-                config_.getRoomStateAggregatorConfig());
+            aggregator_ = std::make_shared<detection::RoomStateAggregator>(config_.getRoomStateAggregatorConfig());
         }
 
         return aggregator_;

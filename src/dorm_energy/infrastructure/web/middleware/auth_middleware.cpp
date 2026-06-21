@@ -5,13 +5,14 @@
 namespace dorm_energy::web
 {
     AuthMiddleware::AuthMiddleware(
-        std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository,
-        std::shared_ptr<AuthService> authService)
+        std::shared_ptr<dorm_energy::storage::IUserRepository> repository,
+        std::shared_ptr<dorm_energy::auth::AuthService> authService)
         : repository_(std::move(repository)), authService_(std::move(authService))
     {
     }
 
-    UserClaims AuthMiddleware::requireClaims(const drogon::HttpRequestPtr &req) const
+    dorm_energy::auth::UserClaims AuthMiddleware::requireClaims(
+        const drogon::HttpRequestPtr &req) const
     {
         auto auth = req->getHeader("Authorization");
         const std::string prefix = "Bearer ";
@@ -27,7 +28,7 @@ namespace dorm_energy::web
     UserDto AuthMiddleware::requireAuthenticatedUser(const drogon::HttpRequestPtr &req) const
     {
         auto claims = requireClaims(req);
-        auto user = repository_->getUserById(claims.userId);
+        auto user = repository_->findUserById(claims.userId);
 
         if (!user)
         {

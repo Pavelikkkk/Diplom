@@ -5,27 +5,14 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
 {
-    class FakeRepository final : public dorm_energy::storage::IMeasurementRepository
+    class FakeRepository final : public dorm_energy::storage::IUserRepository
     {
     public:
-        bool save(const dorm_energy::core::SensorReading &) override { return true; }
-        std::size_t saveBatch(const dorm_energy::core::ReadingsBatch &readings) override { return readings.size(); }
-        void flush() override {}
-        bool saveAnomaly(const dorm_energy::core::SensorReading &, const std::string &, dorm_energy::core::AlertSeverity, const std::string &, double) override { return true; }
-        std::vector<dorm_energy::storage::AnomalyDto> getLatestAnomalies(std::size_t, int) override { return {}; }
-        std::vector<dorm_energy::storage::PowerPointDto> getPowerHistory(int, int) override { return {}; }
-        std::vector<dorm_energy::storage::DeviceDto> getDevices(int) override { return {}; }
-        std::vector<dorm_energy::storage::BuildingDto> getBuildings(int) override { return {}; }
-        std::vector<dorm_energy::storage::RoomDto> getRooms(int) override { return {}; }
-        std::vector<dorm_energy::storage::TopConsumerDto> getTopConsumers(int, int) override { return {}; }
-        std::vector<dorm_energy::storage::AnomalyStatsDto> getAnomalyStatistics(int) override { return {}; }
-        std::vector<dorm_energy::storage::EnergyByRoomDto> getEnergyByRoom(int) override { return {}; }
-        std::vector<dorm_energy::storage::SeverityStatsDto> getSeverityDistribution(int) override { return {}; }
-
         std::optional<UserDto> findUserByEmail(const std::string &email) override
         {
             if (user.has_value() && user->email == email)
@@ -52,20 +39,14 @@ namespace
             return nextId;
         }
 
-        std::optional<UserDto> getUserById(int userId) override { return findUserById(userId); }
         bool updateUserTelegramChatId(int, const std::string &) override { return true; }
-        Json::Value getUserSubscription(int) override { return Json::Value{}; }
-        Json::Value getAdminOverview() override { return Json::Value{}; }
-        int createBuildingForOrganization(int, const std::string &, const std::string &, const std::string &) override { return 1; }
-        int createRoomForBuilding(int, const std::string &, const std::string &, int) override { return 1; }
-        bool createDeviceForRoom(const std::string &, const std::string &, const std::string &, const std::string &, int) override { return true; }
 
         int nextId{42};
         std::optional<UserDto> user;
         std::optional<UserDto> lastCreated;
     };
 
-    class FakePasswordHasher final : public IPasswordHasher
+    class FakePasswordHasher final : public dorm_energy::auth::IPasswordHasher
     {
     public:
         std::string hash(const std::string &password) override
@@ -86,7 +67,7 @@ namespace
         std::string lastHashToVerify;
     };
 
-    class FakeJwtService final : public IJwtService
+    class FakeJwtService final : public dorm_energy::auth::IJwtService
     {
     public:
         std::string generateToken(int userId, const std::string &email, const std::string &role) override
@@ -97,19 +78,17 @@ namespace
             return "token:" + std::to_string(userId) + ":" + email + ":" + role;
         }
 
-        UserClaims validateToken(const std::string &token) override
+        dorm_energy::auth::UserClaims validateToken(const std::string &token) override
         {
             lastValidatedToken = token;
             return claims;
         }
 
-        int extractUserId(const std::string &) override { return claims.userId; }
-
         int lastUserId{0};
         std::string lastEmail;
         std::string lastRole;
         std::string lastValidatedToken;
-        UserClaims claims{7, "user@example.com", "USER"};
+        dorm_energy::auth::UserClaims claims{7, "user@example.com", "USER"};
     };
 
     struct AuthFixture
@@ -117,17 +96,41 @@ namespace
         std::shared_ptr<FakeRepository> repository{std::make_shared<FakeRepository>()};
         std::shared_ptr<FakePasswordHasher> hasher{std::make_shared<FakePasswordHasher>()};
         std::shared_ptr<FakeJwtService> jwt{std::make_shared<FakeJwtService>()};
-        AuthService service{repository, hasher, jwt};
+        dorm_energy::auth::AuthService service{repository, hasher, jwt};
     };
+
+    dorm_energy::auth::RegisterRequest registerRequest(
+        std::string username,
+        std::string email,
+        std::string password,
+        std::string accountType)
+    {
+        return dorm_energy::auth::RegisterRequest{
+            .username = std::move(username),
+            .email = std::move(email),
+            .password = std::move(password),
+            .accountType = std::move(accountType),
+        };
+    }
+
+    dorm_energy::auth::LoginRequest loginRequest(
+        std::string email,
+        std::string password)
+    {
+        return dorm_energy::auth::LoginRequest{
+            .email = std::move(email),
+            .password = std::move(password),
+        };
+    }
 }
 
 TEST(AuthServiceTest, ValidatesRegistrationInput)
 {
     AuthFixture fixture;
 
-    EXPECT_THROW(fixture.service.registerUser("ab", "user@example.com", "password123", "PERSONAL"), std::runtime_error);
-    EXPECT_THROW(fixture.service.registerUser("alice", "invalid", "password123", "PERSONAL"), std::runtime_error);
-    EXPECT_THROW(fixture.service.registerUser("alice", "user@example.com", "short", "PERSONAL"), std::runtime_error);
+    EXPECT_THROW(fixture.service.registerUser(registerRequest("ab", "user@example.com", "password123", "PERSONAL")), std::runtime_error);
+    EXPECT_THROW(fixture.service.registerUser(registerRequest("alice", "invalid", "password123", "PERSONAL")), std::runtime_error);
+    EXPECT_THROW(fixture.service.registerUser(registerRequest("alice", "user@example.com", "short", "PERSONAL")), std::runtime_error);
 }
 
 TEST(AuthServiceTest, RejectsDuplicateRegistration)
@@ -135,14 +138,14 @@ TEST(AuthServiceTest, RejectsDuplicateRegistration)
     AuthFixture fixture;
     fixture.repository->user = UserDto{.id = 1, .username = "Alice", .email = "user@example.com", .passwordHash = "hash"};
 
-    EXPECT_THROW(fixture.service.registerUser("alice", "user@example.com", "password123", "PERSONAL"), std::runtime_error);
+    EXPECT_THROW(fixture.service.registerUser(registerRequest("alice", "user@example.com", "password123", "PERSONAL")), std::runtime_error);
 }
 
 TEST(AuthServiceTest, RegistersPersonalUserWithHashedPassword)
 {
     AuthFixture fixture;
 
-    const int id = fixture.service.registerUser("alice", "user@example.com", "password123", "SOMETHING_ELSE");
+    const int id = fixture.service.registerUser(registerRequest("alice", "user@example.com", "password123", "SOMETHING_ELSE"));
 
     ASSERT_TRUE(fixture.repository->lastCreated.has_value());
     EXPECT_EQ(id, 42);
@@ -158,7 +161,7 @@ TEST(AuthServiceTest, RegistersBusinessAccountWhenRequested)
 {
     AuthFixture fixture;
 
-    fixture.service.registerUser("alice", "user@example.com", "password123", "BUSINESS");
+    fixture.service.registerUser(registerRequest("alice", "user@example.com", "password123", "BUSINESS"));
 
     ASSERT_TRUE(fixture.repository->lastCreated.has_value());
     EXPECT_EQ(fixture.repository->lastCreated->accountType, "BUSINESS");
@@ -168,7 +171,7 @@ TEST(AuthServiceTest, LoginRejectsMissingUserAndWrongPassword)
 {
     AuthFixture fixture;
 
-    EXPECT_THROW(fixture.service.loginUser("missing@example.com", "password123"), std::runtime_error);
+    EXPECT_THROW(fixture.service.loginUser(loginRequest("missing@example.com", "password123")), std::runtime_error);
 
     fixture.repository->user = UserDto{
         .id = 9,
@@ -177,7 +180,7 @@ TEST(AuthServiceTest, LoginRejectsMissingUserAndWrongPassword)
         .passwordHash = "hashed:correct-password",
         .role = "USER"};
 
-    EXPECT_THROW(fixture.service.loginUser("user@example.com", "wrong-password"), std::runtime_error);
+    EXPECT_THROW(fixture.service.loginUser(loginRequest("user@example.com", "wrong-password")), std::runtime_error);
 }
 
 TEST(AuthServiceTest, LoginReturnsGeneratedToken)
@@ -190,9 +193,9 @@ TEST(AuthServiceTest, LoginReturnsGeneratedToken)
         .passwordHash = "hashed:correct-password",
         .role = "ADMIN"};
 
-    const auto token = fixture.service.loginUser("user@example.com", "correct-password");
+    const auto response = fixture.service.loginUser(loginRequest("user@example.com", "correct-password"));
 
-    EXPECT_EQ(token, "token:9:user@example.com:ADMIN");
+    EXPECT_EQ(response.token, "token:9:user@example.com:ADMIN");
     EXPECT_EQ(fixture.jwt->lastUserId, 9);
     EXPECT_EQ(fixture.jwt->lastEmail, "user@example.com");
     EXPECT_EQ(fixture.jwt->lastRole, "ADMIN");
@@ -201,7 +204,7 @@ TEST(AuthServiceTest, LoginReturnsGeneratedToken)
 TEST(AuthServiceTest, ValidateTokenDelegatesToJwtService)
 {
     AuthFixture fixture;
-    fixture.jwt->claims = UserClaims{5, "admin@example.com", "ADMIN"};
+    fixture.jwt->claims = dorm_energy::auth::UserClaims{5, "admin@example.com", "ADMIN"};
 
     const auto claims = fixture.service.validateToken("jwt-token");
 

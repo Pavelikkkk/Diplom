@@ -1,41 +1,66 @@
 #include "dorm_energy/infrastructure/notifier/telegram_notifier.hpp"
+
 #include "dorm_energy/core/alert_severity.hpp"
-#include "dorm_energy/core/measurement.hpp"
+#include "dorm_energy/core/time_utils.hpp"
 
 #include <chrono>
 #include <curl/curl.h>
-#include <iomanip>
-#include <iostream>
 #include <sstream>
 #include <thread>
+#include <utility>
 
 namespace dorm_energy::notifier
 {
     namespace
     {
-        std::size_t discardResponse(char *contents, std::size_t size, std::size_t nmemb,
-                                    void *userp)
+        std::size_t discardResponse(
+            char *contents,
+            std::size_t size,
+            std::size_t nmemb,
+            void *userp)
         {
             (void)contents;
             (void)userp;
+
             return size * nmemb;
         }
-    }
 
-    TelegramNotifier::TelegramNotifier(const application::AppConfig &config)
-        : TelegramNotifier(TelegramConfig::fromAppConfig(config))
-    {
-    }
-
-    TelegramNotifier::TelegramNotifier(TelegramConfig cfg) : config_(std::move(cfg))
-    {
-        if (config_.enabled && !config_.botToken.empty() && !config_.chatId.empty())
+        std::string severityEmoji(
+            core::AlertSeverity severity)
         {
-            apiUrl_ = "https://api.telegram.org/bot" + config_.botToken + "/sendMessage";
-            std::cout << "[TelegramNotifier] Initialized (chat_id: " << config_.chatId << ")\n";
+            switch (severity)
+            {
+            case core::AlertSeverity::Critical:
+                return "🚨";
 
-            startQueueWorker();
+            case core::AlertSeverity::Warning:
+                return "⚠️";
+
+            case core::AlertSeverity::Info:
+            default:
+                return "ℹ️";
+            }
         }
+    }
+
+    TelegramNotifier::TelegramNotifier(
+        TelegramConfig config)
+        : config_(std::move(config)),
+          queue_(config_.maxQueueSize)
+    {
+        if (!config_.enabled)
+        {
+            return;
+        }
+
+        if (config_.botToken.empty() || config_.chatId.empty())
+        {
+            return;
+        }
+
+        apiUrl_ = "https://api.telegram.org/bot" + config_.botToken + "/sendMessage";
+
+        startQueueWorker();
     }
 
     TelegramNotifier::~TelegramNotifier()
@@ -43,168 +68,198 @@ namespace dorm_energy::notifier
         stopQueueWorker();
     }
 
-    bool TelegramNotifier::sendAlert(const core::RoomState &state,
-                                     const detection::AnomalyInfo &info)
+    bool TelegramNotifier::send(
+        const notification::NotificationMessage &message)
     {
         if (!config_.enabled || apiUrl_.empty())
+        {
             return false;
+        }
 
-        std::string text = buildAlertMessage(state, info);
+        const std::string text = buildTelegramText(message);
 
         if (sendMessage(text))
+        {
             return true;
+        }
 
-        // queue_.push(state, info.severity, info.description);
-        std::cout << "[TelegramNotifier] Message queued (size: " << queue_.size() << ")\n";
+        queue_.push(message);
+
         return false;
     }
 
-    std::size_t TelegramNotifier::sendAlerts(const std::vector<core::RoomState> &states,
-                                             const detection::AnomalyInfo &info)
+    std::size_t TelegramNotifier::sendBatch(
+        const std::vector<notification::NotificationMessage> &messages)
     {
-        if (states.empty())
+        if (messages.empty())
+        {
             return 0;
-
-        std::size_t sent = 0;
-        for (const auto &state : states)
-        {
-            if (sendAlert(state, info))
-                ++sent;
-        }
-        return sent;
-    }
-
-    bool TelegramNotifier::sendMessage(const std::string &text)
-    {
-        if (text.empty())
-            return false;
-
-        CURL *curl = curl_easy_init();
-        if (!curl)
-            return false;
-
-        std::string replyMarkup = R"({"inline_keyboard":[[{"text":"✅ Принято","callback_data":"ack"}]]})";
-
-        char *escapedText = curl_easy_escape(curl, text.c_str(), static_cast<int>(text.length()));
-        char *escapedMarkup =
-            curl_easy_escape(curl, replyMarkup.c_str(), static_cast<int>(replyMarkup.length()));
-
-        std::string postData = "chat_id=" + config_.chatId + "&text=" + escapedText +
-                               "&parse_mode=MarkdownV2" + "&reply_markup=" + escapedMarkup;
-
-        curl_free(escapedText);
-        curl_free(escapedMarkup);
-
-        curl_easy_setopt(curl, CURLOPT_URL, apiUrl_.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, discardResponse);
-
-        CURLcode res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-
-        return res == CURLE_OK;
-    }
-
-    std::string TelegramNotifier::buildAlertMessage(
-        const core::RoomState &state,
-        const detection::AnomalyInfo &info) const
-    {
-        std::ostringstream oss;
-
-        std::string emoji =
-            (info.severity == core::AlertSeverity::Critical)
-                ? "🚨"
-            : (info.severity == core::AlertSeverity::Warning) ? "⚠️"
-                                                              : "ℹ️";
-
-        oss << emoji << " *" << core::toString(info.severity) << " АНОМАЛИЯ*\n\n";
-        oss << "🏠 *Комната:* `" << state.deviceId << "`\n";
-        oss << "⚡ *Power:* `" << std::fixed << std::setprecision(2) << state.power << "` kW\n";
-        oss << "🚶 *Motion:* `" << (state.motion ? "true" : "false") << "`\n";
-        oss << "💡 *Light:* `" << std::fixed << std::setprecision(2) << state.light << "` lx\n";
-        oss << "🚨 *Тип:* `" << info.anomalyType << "`\n";
-
-        if (info.score > 0.0)
-        {
-            oss << "🤖 *ML Score:* `" << std::fixed << std::setprecision(3) << info.score << "`\n";
         }
 
-        auto tt = std::chrono::system_clock::to_time_t(state.timestamp);
-        std::ostringstream ts;
-        ts << std::put_time(std::localtime(&tt), "%Y-%m-%d %H:%M:%S");
-        oss << "⏰ *Время:* `" << ts.str() << "`\n";
+        std::size_t sentCount = 0;
 
-        if (!info.description.empty())
+        for (const auto &message : messages)
         {
-            oss << "\n🔍 *Причина:* " << info.description << "\n";
-        }
-
-        oss << "\n_Нажми кнопку ниже после принятия_";
-
-        std::string msg = oss.str();
-        const std::string special = "_*[]()~`>#+-=|{}.!";
-
-        for (char c : special)
-        {
-            size_t pos = 0;
-            while ((pos = msg.find(c, pos)) != std::string::npos)
+            if (send(message))
             {
-                msg.insert(pos, "\\");
-                pos += 2;
+                ++sentCount;
             }
         }
 
-        return msg;
+        return sentCount;
+    }
+
+    bool TelegramNotifier::sendMessage(
+        const std::string &text)
+    {
+        if (text.empty())
+        {
+            return false;
+        }
+
+        CURL *curl = curl_easy_init();
+
+        if (!curl)
+        {
+            return false;
+        }
+
+        char *escapedChatId = curl_easy_escape(
+            curl,
+            config_.chatId.c_str(),
+            static_cast<int>(config_.chatId.length()));
+
+        char *escapedText = curl_easy_escape(
+            curl,
+            text.c_str(),
+            static_cast<int>(text.length()));
+
+        if (!escapedChatId || !escapedText)
+        {
+            if (escapedChatId)
+            {
+                curl_free(escapedChatId);
+            }
+
+            if (escapedText)
+            {
+                curl_free(escapedText);
+            }
+
+            curl_easy_cleanup(curl);
+
+            return false;
+        }
+
+        const std::string postData = "chat_id=" + std::string(escapedChatId) + "&text=" + std::string(escapedText);
+
+        curl_free(escapedChatId);
+        curl_free(escapedText);
+
+        curl_easy_setopt(curl, CURLOPT_URL, apiUrl_.c_str());
+
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS,
+                         postData.c_str());
+
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, discardResponse);
+
+        const CURLcode result = curl_easy_perform(curl);
+
+        curl_easy_cleanup(curl);
+
+        return result == CURLE_OK;
+    }
+
+    std::string TelegramNotifier::buildTelegramText(
+        const notification::NotificationMessage &message) const
+    {
+        std::ostringstream stream;
+
+        stream << severityEmoji(message.severity) << " Dorm Energy Alert\n";
+
+        if (!message.title.empty())
+        {
+            stream << "\n"
+                   << message.title << "\n";
+        }
+
+        if (!message.body.empty())
+        {
+            stream << "\n"
+                   << message.body << "\n";
+        }
+
+        if (!message.deviceId.empty())
+        {
+            stream << "\nDevice: " << message.deviceId;
+        }
+
+        stream
+            << "\nSeverity: "
+            << core::toString(message.severity);
+
+        if (message.timestamp != core::TimePoint{})
+        {
+            stream << "\nTime: " << core::formatLocalTimestamp(message.timestamp);
+        }
+
+        return stream.str();
     }
 
     void TelegramNotifier::startQueueWorker()
     {
         if (running_)
+        {
             return;
+        }
+
         running_ = true;
+
         workerThread_ = std::thread(&TelegramNotifier::queueWorker, this);
     }
 
     void TelegramNotifier::stopQueueWorker()
     {
         if (!running_)
+        {
             return;
+        }
+
         running_ = false;
+
         if (workerThread_.joinable())
+        {
             workerThread_.join();
+        }
     }
 
     void TelegramNotifier::queueWorker()
     {
-        std::cout << "[TelegramNotifier] Queue worker started\n";
-
         while (running_)
         {
-            bool hasInternet = false;
-
             if (!queue_.empty())
             {
-                hasInternet = flushQueue();
+                const bool flushed = flushQueue();
 
-                if (hasInternet)
+                if (flushed)
                 {
                     currentBackoff_ = std::chrono::seconds{5};
                 }
                 else
                 {
-                    auto current = currentBackoff_.load();
+                    const auto current = currentBackoff_.load();
+
                     long long seconds = current.count() * 2;
+
                     if (seconds > 900)
+                    {
                         seconds = 900;
+                    }
+
                     currentBackoff_ = std::chrono::seconds{seconds};
                 }
-            }
-
-            if (queue_.size() > 0)
-            {
-                std::cout << "[TelegramNotifier] Queue: " << queue_.size()
-                          << " | Backoff: " << currentBackoff_.load().count() << "s\n";
             }
 
             std::this_thread::sleep_for(currentBackoff_.load());
@@ -213,17 +268,30 @@ namespace dorm_energy::notifier
 
     bool TelegramNotifier::flushQueue()
     {
-        return true;
+        const auto queuedMessages = queue_.getAllAndClear();
+
+        if (queuedMessages.empty())
+        {
+            return true;
+        }
+
+        bool allSucceeded = true;
+
+        for (const auto &queued : queuedMessages)
+        {
+            const std::string text = buildTelegramText(queued.message);
+
+            if (!sendMessage(text))
+            {
+                queue_.push(queued.message);
+                allSucceeded = false;
+            }
+        }
+
+        return allSucceeded;
     }
 
     void TelegramNotifier::logQueueStatus()
     {
-        std::size_t sz = queue_.size();
-        if (sz > 0)
-        {
-            std::cout << "[TelegramNotifier] Queue: " << sz
-                      << " alerts | Backoff: " << currentBackoff_.load().count() << "s\n";
-        }
     }
-
 } // namespace dorm_energy::notifier

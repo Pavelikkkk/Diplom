@@ -1,6 +1,7 @@
 #include "dorm_energy/infrastructure/web/controllers/resources_controller.hpp"
 
 #include "dorm_energy/infrastructure/web/middleware/auth_middleware.hpp"
+#include "dorm_energy/infrastructure/web/utils/dto_json_mapper.hpp"
 #include "dorm_energy/infrastructure/web/utils/json_response.hpp"
 
 #include <drogon/drogon.h>
@@ -9,12 +10,13 @@ namespace dorm_energy::web
 {
     void registerResourceRoutes(const WebContext &context)
     {
-        auto repository = context.repository;
-        auto auth = AuthMiddleware(repository, context.authService);
+        auto catalogRepository = context.catalogRepository;
+        auto anomalyRepository = context.anomalyRepository;
+        auto auth = AuthMiddleware(context.userRepository, context.authService);
 
         drogon::app().registerHandler(
             "/api/stats",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [catalogRepository, anomalyRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
                 Json::Value json;
@@ -25,13 +27,13 @@ namespace dorm_energy::web
                     auto user = auth.requireUser(req);
 
                     json["buildings"] =
-                        static_cast<int>(repository->getBuildings(user.organizationId).size());
+                        static_cast<int>(catalogRepository->getBuildings(user.organizationId).size());
                     json["rooms"] =
-                        static_cast<int>(repository->getRooms(user.organizationId).size());
+                        static_cast<int>(catalogRepository->getRooms(user.organizationId).size());
                     json["devices"] =
-                        static_cast<int>(repository->getDevices(user.organizationId).size());
+                        static_cast<int>(catalogRepository->getDevices(user.organizationId).size());
                     json["anomalies"] = static_cast<int>(
-                        repository->getLatestAnomalies(1000, user.organizationId).size());
+                        anomalyRepository->getLatestAnomalies(1000, user.organizationId).size());
                     json["mqttOnline"] = true;
                     json["success"] = true;
                 }
@@ -46,29 +48,15 @@ namespace dorm_energy::web
 
         drogon::app().registerHandler(
             "/api/buildings",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [catalogRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
-                Json::Value buildings(Json::arrayValue);
-
                 try
                 {
                     auto user = auth.requireUser(req);
-                    auto list = repository->getBuildings(user.organizationId);
+                    auto list = catalogRepository->getBuildings(user.organizationId);
 
-                    for (const auto &building : list)
-                    {
-                        Json::Value item;
-
-                        item["id"] = building.id;
-                        item["name"] = building.name;
-                        item["address"] = building.address;
-                        item["description"] = building.description;
-
-                        buildings.append(item);
-                    }
-
-                    callback(makeJsonResponse(buildings));
+                    callback(makeJsonResponse(toJsonArray(list)));
                 }
                 catch (const std::exception &ex)
                 {
@@ -78,30 +66,15 @@ namespace dorm_energy::web
 
         drogon::app().registerHandler(
             "/api/rooms",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [catalogRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
-                Json::Value rooms(Json::arrayValue);
-
                 try
                 {
                     auto user = auth.requireUser(req);
-                    auto list = repository->getRooms(user.organizationId);
+                    auto list = catalogRepository->getRooms(user.organizationId);
 
-                    for (const auto &room : list)
-                    {
-                        Json::Value item;
-
-                        item["id"] = room.id;
-                        item["buildingId"] = room.buildingId;
-                        item["roomName"] = room.roomName;
-                        item["roomType"] = room.roomType;
-                        item["floorNumber"] = room.floorNumber;
-
-                        rooms.append(item);
-                    }
-
-                    callback(makeJsonResponse(rooms));
+                    callback(makeJsonResponse(toJsonArray(list)));
                 }
                 catch (const std::exception &ex)
                 {
@@ -111,35 +84,15 @@ namespace dorm_energy::web
 
         drogon::app().registerHandler(
             "/api/devices",
-            [repository, auth](const drogon::HttpRequestPtr &req,
+            [catalogRepository, auth](const drogon::HttpRequestPtr &req,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback)
             {
-                Json::Value devices(Json::arrayValue);
-
                 try
                 {
                     auto user = auth.requireUser(req);
-                    auto list = repository->getDevices(user.organizationId);
+                    auto list = catalogRepository->getDevices(user.organizationId);
 
-                    for (const auto &device : list)
-                    {
-                        Json::Value item;
-
-                        item["deviceId"] = device.deviceId;
-                        item["deviceName"] = device.deviceName;
-                        item["deviceModel"] = device.deviceModel;
-                        item["firmwareVersion"] = device.firmwareVersion;
-                        item["roomName"] = device.roomName;
-                        item["roomId"] = device.roomId;
-                        item["buildingId"] = device.buildingId;
-                        item["organizationId"] = device.organizationId;
-                        item["isOnline"] = device.isOnline;
-                        item["lastSeenAt"] = device.lastSeenAt;
-
-                        devices.append(item);
-                    }
-
-                    callback(makeJsonResponse(devices));
+                    callback(makeJsonResponse(toJsonArray(list)));
                 }
                 catch (const std::exception &ex)
                 {

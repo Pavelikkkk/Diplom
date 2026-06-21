@@ -74,7 +74,7 @@ namespace dorm_energy::application
             logger_->info("Synthetic anomaly injection enabled");
         }
 
-        const auto devices = createSimulationDevices(1);
+        const auto devices = createSimulationDevices(10); // 
 
         logger_->info("Preparing " + std::to_string(devices.size()) + " simulation device(s)");
         logger_->info("Using simulation device: " + devices.front().deviceId);
@@ -105,6 +105,21 @@ namespace dorm_energy::application
         }
 
         logger_->info("Exported labels to " + config_.getSimulationLabelsPath());
+
+        if (!config_.getInjectAnomalies())
+        {
+            logger_->info("Synthetic anomaly injection disabled; skipping detector validation pass for ML training dataset");
+
+            if (simulation::AnomalyReportExporter::exportReport({}, config_.getSimulationAnomalyReportPath()))
+            {
+                logger_->info("Exported empty anomaly report to " + config_.getSimulationAnomalyReportPath());
+                logger_->info("Offline simulation completed successfully");
+                return 0;
+            }
+
+            logger_->error("Failed to export anomaly report to " + config_.getSimulationAnomalyReportPath());
+            return 1;
+        }
 
         detection::RoomStateAggregator aggregator; 
         detection::AnomalyTracker tracker;

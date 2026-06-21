@@ -1,0 +1,14 @@
+{
+  "name": "bcrypt",
+  "version-string": "2020-12-27",
+  "port-version": 1,
+  "description": "C++ bcrypt password hashing library",
+  "homepage": "https://github.com/hilch/Bcrypt.cpp",
+  "license": "BSD-3-Clause",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

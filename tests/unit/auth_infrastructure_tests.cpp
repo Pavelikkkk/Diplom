@@ -1,5 +1,5 @@
 #include "dorm_energy/infrastructure/auth/jwt_service.hpp"
-#include "dorm_energy/infrastructure/auth/openssl_password_hasher.hpp"
+#include "dorm_energy/infrastructure/auth/bcrypt_password_hasher.hpp"
 
 #include <gtest/gtest.h>
 
@@ -7,7 +7,7 @@
 
 TEST(AuthInfrastructureTest, PasswordHasherVerifiesOnlyMatchingPassword)
 {
-    OpenSslPasswordHasher hasher;
+    dorm_energy::auth::BcryptPasswordHasher hasher;
 
     const auto hash =
         hasher.hash(
@@ -26,8 +26,9 @@ TEST(AuthInfrastructureTest, PasswordHasherVerifiesOnlyMatchingPassword)
 
 TEST(AuthInfrastructureTest, JwtServiceGeneratesAndValidatesClaims)
 {
-    JwtService jwt{
-        "test-secret"};
+    dorm_energy::auth::JwtService jwt{
+        "test-secret",
+        24};
 
     const auto token =
         jwt.generateToken(
@@ -54,16 +55,18 @@ TEST(AuthInfrastructureTest, JwtServiceGeneratesAndValidatesClaims)
 
 TEST(AuthInfrastructureTest, JwtServiceRejectsMalformedAndWronglySignedTokens)
 {
-    JwtService jwt{
-        "test-secret"};
+    dorm_energy::auth::JwtService jwt{
+        "test-secret",
+        24};
 
     EXPECT_THROW(
         jwt.validateToken(
             "not-a-jwt"),
         std::exception);
 
-    JwtService otherJwt{
-        "another-secret"};
+    dorm_energy::auth::JwtService otherJwt{
+        "another-secret",
+        24};
 
     const auto token =
         otherJwt.generateToken(

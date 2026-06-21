@@ -6,15 +6,26 @@
 
 #include <drogon/drogon.h>
 
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <utility>
 
 namespace dorm_energy::web
 {
     WebServer::WebServer(std::shared_ptr<dorm_energy::detection::RoomStateAggregator> aggregator,
-                         std::shared_ptr<dorm_energy::storage::IMeasurementRepository> repository,
-                         std::shared_ptr<AuthService> authService)
-        : aggregator_(std::move(aggregator)), repository_(std::move(repository)),
+                         std::shared_ptr<dorm_energy::storage::IAdminRepository> adminRepository,
+                         std::shared_ptr<dorm_energy::storage::IAnomalyRepository> anomalyRepository,
+                         std::shared_ptr<dorm_energy::storage::IDashboardRepository> dashboardRepository,
+                         std::shared_ptr<dorm_energy::storage::IDeviceCatalogRepository> catalogRepository,
+                         std::shared_ptr<dorm_energy::storage::IUserRepository> userRepository,
+                         std::shared_ptr<dorm_energy::storage::ISubscriptionRepository> subscriptionRepository,
+                         std::shared_ptr<dorm_energy::auth::AuthService> authService)
+        : aggregator_(std::move(aggregator)),
+          adminRepository_(std::move(adminRepository)),
+          anomalyRepository_(std::move(anomalyRepository)),
+          dashboardRepository_(std::move(dashboardRepository)),
+          catalogRepository_(std::move(catalogRepository)),
+          userRepository_(std::move(userRepository)),
+          subscriptionRepository_(std::move(subscriptionRepository)),
           authService_(std::move(authService))
     {
     }
@@ -24,20 +35,22 @@ namespace dorm_energy::web
         drogon::app().addListener("0.0.0.0", 8080);
 
         registerCorsMiddleware();
-        registerWebRoutes(WebContext{aggregator_, repository_, authService_});
+        registerWebRoutes(WebContext{aggregator_, adminRepository_, anomalyRepository_,
+                                     dashboardRepository_, catalogRepository_, userRepository_,
+                                     subscriptionRepository_, authService_});
 
-        std::cout << "Starting Drogon..." << std::endl;
+        spdlog::info("Starting Drogon...");
 
-        server_thread_ = std::thread([]() { drogon::app().run(); });
+        serverThread_ = std::thread([]() { drogon::app().run(); });
     }
 
     void WebServer::stop()
     {
         drogon::app().quit();
 
-        if (server_thread_.joinable())
+        if (serverThread_.joinable())
         {
-            server_thread_.join();
+            serverThread_.join();
         }
     }
 } // namespace dorm_energy::web

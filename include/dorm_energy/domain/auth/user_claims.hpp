@@ -2,11 +2,12 @@
 
 #include <string>
 
-struct UserClaims
+namespace dorm_energy::auth
 {
-    int userId;
-
-    std::string email;
-
-    std::string role;
-};
+    struct UserClaims
+    {
+        int userId{0};
+        std::string email{};
+        std::string role{};
+    };
+}
