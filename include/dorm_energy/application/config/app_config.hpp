@@ -123,7 +123,7 @@ namespace dorm_energy::application
         std::string telegramChatId_{};
 
         std::string jwtSecret_{};
-        int jwtTokenLifetimeHours_{24};
+        int jwtTokenLifetimeHours_{168};
     };
 
 } // namespace dorm_energy::application

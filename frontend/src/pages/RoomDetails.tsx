@@ -138,26 +138,23 @@ export default function RoomDetails() {
               font-bold
               mb-6">Room Information</h2>
 
-        <div className="space-y-4">
-          <div className="flex
-                justify-between">
+        <div className="grid gap-4 text-lg md:grid-cols-2">
+          <div className="flex justify-between gap-6 rounded-lg bg-slate-950/60 px-4 py-3">
             <span className="text-slate-300">Room Name</span>
 
-            <span>{room.name}</span>
+            <span className="font-semibold text-right">{room.name}</span>
           </div>
 
-          <div className="flex
-                justify-between">
+          <div className="flex justify-between gap-6 rounded-lg bg-slate-950/60 px-4 py-3">
             <span className="text-slate-300">Building</span>
 
-            <span>{room.buildingName}</span>
+            <span className="font-semibold text-right">{room.buildingName || "Default building"}</span>
           </div>
 
-          <div className="flex
-                justify-between">
+          <div className="flex justify-between gap-6 rounded-lg bg-slate-950/60 px-4 py-3">
             <span className="text-slate-300">Devices</span>
 
-            <span>{devices.length}</span>
+            <span className="font-semibold text-right">{devices.length}</span>
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@ type Plan = {
   price: string;
   badge?: "Current" | "Popular" | "Best Choice";
   highlight?: boolean;
-  currentWhen?: string;
+  currentWhen?: string | string[];
   features: string[];
 };
 
@@ -11,21 +11,23 @@ const personalPlans: Plan[] = [
   {
     name: "Free",
     price: "Free",
-    badge: "Current",
     highlight: true,
-    features: ["\u2705 2 Rooms", "\u2705 5 Devices", "\u2705 Anomalies", "\u274C Analytics"],
+    currentWhen: "FREE",
+    features: ["\u2705 2 Rooms", "\u2705 Anomalies", "\u274C Analytics"],
   },
   {
     name: "Basic",
     price: "$4.99 / month",
-    features: ["\u2705 10 Rooms", "\u2705 30 Devices", "\u2705 Notifications", "\u2705 Full History"],
+    currentWhen: "STANDARD",
+    features: ["\u2705 10 Rooms", "\u2705 Notifications", "\u2705 Full History"],
   },
   {
     name: "Pro",
     price: "$9.99 / month",
     badge: "Popular",
     highlight: true,
-    features: ["\u2705 50 Rooms", "\u2705 100 Devices", "\u2705 AI Analytics", "\u2705 Priority Support"],
+    currentWhen: "PRO",
+    features: ["\u2705 50 Rooms", "\u2705 AI Analytics", "\u2705 Priority Support"],
   },
 ];
 
@@ -34,14 +36,14 @@ const businessPlans: Plan[] = [
     name: "Free",
     price: "Free",
     currentWhen: "FREE",
-    features: ["\u2705 1 Building", "\u2705 5 Rooms", "\u2705 10 Devices", "\u274C Advanced Analytics"],
+    features: ["\u2705 1 Building", "\u2705 5 Rooms", "\u274C Advanced Analytics"],
   },
   {
     name: "Standard",
     price: "$29.99 / month",
     badge: "Best Choice",
-    currentWhen: "STANDARD",
-    features: ["\u2705 5 Buildings", "\u2705 100 Rooms", "\u2705 500 Devices", "\u2705 Analytics"],
+    currentWhen: ["STANDARD", "BUSINESS"],
+    features: ["\u2705 5 Buildings", "\u2705 100 Rooms", "\u2705 Analytics"],
   },
   {
     name: "Enterprise",
@@ -50,7 +52,6 @@ const businessPlans: Plan[] = [
     features: [
       "\u2705 Unlimited Buildings",
       "\u2705 Unlimited Rooms",
-      "\u2705 Unlimited Devices",
       "\u2705 Team Management",
       "\u2705 Reports",
       "\u2705 Dedicated Support",
@@ -68,8 +69,10 @@ function Badge({ children }: { children: React.ReactNode }) {
 
 function PlanCard({ plan, currentPlan }: { plan: Plan; currentPlan: string }) {
   const isCurrent = plan.currentWhen
-    ? currentPlan === plan.currentWhen
-    : plan.badge === "Current";
+    ? Array.isArray(plan.currentWhen)
+      ? plan.currentWhen.includes(currentPlan)
+      : currentPlan === plan.currentWhen
+    : false;
   const borderClass =
     isCurrent || plan.highlight ? "border-cyan-500" : "border-cyan-700/40";
 

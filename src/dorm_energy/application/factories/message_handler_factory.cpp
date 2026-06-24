@@ -17,6 +17,7 @@ namespace dorm_energy::application::factories
             std::move(detector),
             repositories.measurements,
             repositories.anomalies,
+            repositories.catalog,
             std::move(notifier),
             std::move(aggregator));
     }

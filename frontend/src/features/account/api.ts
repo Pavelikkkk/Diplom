@@ -15,3 +15,9 @@ export async function updateTelegramChatId(telegramChatId: string) {
     body: JSON.stringify({ telegramChatId }),
   });
 }
+
+export async function upgradeSubscription() {
+  return request<{ subscription: Subscription; message: string }>("/subscription/upgrade", {
+    method: "POST",
+  });
+}

@@ -10,6 +10,7 @@ type Device = {
   firmwareVersion: string;
   roomName: string;
   roomId: number;
+  mqttTopic?: string;
   isOnline: boolean;
   lastSeenAt: string;
 };
@@ -23,17 +24,21 @@ export default function Devices() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
 
-  useEffect(() => {
-    async function loadDevices() {
-      try {
-        const data = await getUserDevices();
-        setDevices(data);
-      } catch (err) {
-        console.error(err);
-      }
+  async function loadDevices() {
+    try {
+      const deviceData = await getUserDevices();
+      setDevices(deviceData);
+    } catch (err) {
+      console.error(err);
     }
+  }
 
-    loadDevices();
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadDevices();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const filteredDevices = devices.filter((device) => {
@@ -81,9 +86,13 @@ export default function Devices() {
             key={value}
             onClick={() => setStatusFilter(value)}
             className={`rounded-lg px-5 py-2 capitalize transition ${
-              statusFilter === value
-                ? "bg-cyan-500 text-slate-950"
-                : "bg-[#111827] text-slate-200 hover:bg-slate-800"
+              statusFilter === value && value === "online"
+                ? "bg-emerald-400 text-slate-950"
+                : statusFilter === value && value === "offline"
+                  ? "bg-rose-400 text-slate-950"
+                  : statusFilter === value
+                    ? "bg-cyan-500 text-slate-950"
+                    : "bg-[#111827] text-slate-200 hover:bg-slate-800"
             }`}
           >
             {value}
@@ -118,6 +127,9 @@ export default function Devices() {
             <div className="space-y-2 text-base 2xl:text-lg">
               <div>{device.deviceModel}</div>
               <div>{device.firmwareVersion}</div>
+              <div className="break-all text-sm text-cyan-300">
+                {device.mqttTopic ?? `devices/${device.deviceId}/+`}
+              </div>
             </div>
 
             <div className="mt-6 font-semibold text-cyan-400">

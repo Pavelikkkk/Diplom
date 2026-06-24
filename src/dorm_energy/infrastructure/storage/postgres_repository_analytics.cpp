@@ -5,7 +5,8 @@ namespace dorm_energy::storage
 
     std::vector<storage::PowerPointDto> PostgresMeasurementRepository::getPowerHistory(
         int hours,
-        int organizationId)
+        int organizationId,
+        int buildingId)
     {
         std::vector<PowerPointDto> result;
 
@@ -26,10 +27,13 @@ namespace dorm_energy::storage
             WHERE sensor_type = 'power'
               AND recorded_at >= NOW() - ($1 || ' hours')::interval
               AND ($2 = 0 OR b.organization_id = $2)
+              AND ($3 = 0 OR b.id = $3)
             GROUP BY bucket
             ORDER BY bucket
             )",
-            hours, organizationId);
+            hours, 
+            organizationId, 
+            buildingId);
 
         for (auto const &row : rows)
         {
@@ -46,7 +50,8 @@ namespace dorm_energy::storage
 
     std::vector<storage::TopConsumerDto> PostgresMeasurementRepository::getTopConsumers(
         int limit,
-        int organizationId)
+        int organizationId,
+        int buildingId)
     {
         std::vector<TopConsumerDto> result;
 
@@ -66,11 +71,14 @@ namespace dorm_energy::storage
                 ON b.id = r.building_id
             WHERE sensor_type = 'power'
               AND ($2 = 0 OR b.organization_id = $2)
+              AND ($3 = 0 OR b.id = $3)
             GROUP BY sensor_readings.device_id
             ORDER BY avg_power DESC
             LIMIT $1
             )",
-            limit, organizationId);
+            limit, 
+            organizationId, 
+            buildingId);
 
         for (const auto &row : rows)
         {
@@ -86,7 +94,8 @@ namespace dorm_energy::storage
     }
 
     std::vector<storage::AnomalyStatsDto> PostgresMeasurementRepository::getAnomalyStatistics(
-        int organizationId)
+        int organizationId,
+        int buildingId)
     {
         std::vector<AnomalyStatsDto> result;
 
@@ -105,10 +114,12 @@ namespace dorm_energy::storage
             JOIN buildings b
                 ON b.id = r.building_id
             WHERE ($1 = 0 OR b.organization_id = $1)
+              AND ($2 = 0 OR b.id = $2)
             GROUP BY anomaly_type
             ORDER BY total DESC
             )",
-            organizationId);
+            organizationId, 
+            buildingId);
 
         for (const auto &row : rows)
         {
@@ -124,7 +135,8 @@ namespace dorm_energy::storage
     }
 
     std::vector<storage::EnergyByRoomDto> PostgresMeasurementRepository::getEnergyByRoom(
-        int organizationId)
+        int organizationId,
+        int buildingId)
     {
         std::vector<EnergyByRoomDto> result;
 
@@ -144,10 +156,12 @@ namespace dorm_energy::storage
                 ON b.id = r.building_id
             WHERE sensor_type = 'power'
               AND ($1 = 0 OR b.organization_id = $1)
+              AND ($2 = 0 OR b.id = $2)
             GROUP BY r.room_name
             ORDER BY avg_power DESC
             )",
-            organizationId);
+            organizationId, 
+            buildingId);
 
         for (auto const &row : rows)
         {
@@ -163,7 +177,8 @@ namespace dorm_energy::storage
     }
 
     std::vector<storage::SeverityStatsDto> PostgresMeasurementRepository::getSeverityDistribution(
-        int organizationId)
+        int organizationId,
+        int buildingId)
     {
         std::vector<SeverityStatsDto> result;
 
@@ -182,10 +197,12 @@ namespace dorm_energy::storage
             JOIN buildings b
                 ON b.id = r.building_id
             WHERE ($1 = 0 OR b.organization_id = $1)
+              AND ($2 = 0 OR b.id = $2)
             GROUP BY severity
             ORDER BY total DESC
             )",
-            organizationId);
+            organizationId, 
+            buildingId);
 
         for (auto const &row : rows)
         {

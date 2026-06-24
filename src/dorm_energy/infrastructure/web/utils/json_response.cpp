@@ -18,7 +18,8 @@ namespace dorm_energy::web
             return drogon::k401Unauthorized;
         }
 
-        if (error == "Admin role is required")
+        if (error == "Admin role is required" ||
+            error == "Business subscription is required")
         {
             return drogon::k403Forbidden;
         }

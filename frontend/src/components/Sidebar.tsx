@@ -26,6 +26,7 @@ export default function Sidebar() {
 
   const isBusiness = account?.accountType === "BUSINESS";
   const isAdmin = account?.role === "ADMIN";
+  const hasAnalytics = isBusiness || isAdmin || account?.subscription.plan === "PRO";
 
   return (
     <>
@@ -38,8 +39,14 @@ export default function Sidebar() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm">
-          <aside className="flex h-screen w-[min(20rem,calc(100vw-2rem))] flex-col border-r border-slate-800 bg-slate-950 p-5">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          onMouseDown={() => setOpen(false)}
+        >
+          <aside
+            onMouseDown={(event) => event.stopPropagation()}
+            className="flex h-screen w-[min(20rem,calc(100vw-2rem))] flex-col border-r border-slate-800 bg-slate-950 p-5"
+          >
             <div className="mb-10 flex items-center justify-between">
               <Link
                 to="/account"
@@ -67,12 +74,16 @@ export default function Sidebar() {
                 Account
               </Link>
 
-              {isBusiness && (
+              {(isBusiness || isAdmin) && (
                 <>
                   <Link to="/buildings" onClick={() => setOpen(false)} className="block transition hover:text-orange-300">
                     <span className="mr-2">{icons.buildings}</span>
                     Buildings
                   </Link>
+                </>
+              )}
+              {hasAnalytics && (
+                <>
                   <Link to="/analytics" onClick={() => setOpen(false)} className="block transition hover:text-orange-300">
                     <span className="mr-2">{icons.analytics}</span>
                     Analytics
@@ -84,10 +95,12 @@ export default function Sidebar() {
                 <span className="mr-2">{icons.rooms}</span>
                 Rooms
               </Link>
-              <Link to="/devices" onClick={() => setOpen(false)} className="block transition hover:text-orange-300">
-                <span className="mr-2">{icons.devices}</span>
-                Devices
-              </Link>
+              {isAdmin && (
+                <Link to="/devices" onClick={() => setOpen(false)} className="block transition hover:text-orange-300">
+                  <span className="mr-2">{icons.devices}</span>
+                  Devices
+                </Link>
+              )}
               <Link to="/anomalies" onClick={() => setOpen(false)} className="block transition hover:text-orange-300">
                 <span className="mr-2">{icons.anomalies}</span>
                 Anomalies

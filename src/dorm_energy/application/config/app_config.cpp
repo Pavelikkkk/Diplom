@@ -239,14 +239,26 @@ namespace dorm_energy::application
                 config.ruleBasedDetectorConfig_.extremeLightLux = parseDoubleOrThrow(key, value);
             else if (key == "RULE_SUSTAINED_HIGH_POWER_KW")
                 config.ruleBasedDetectorConfig_.sustainedHighPowerKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_SUSTAINED_HIGH_POWER_WINDOW_MINUTES")
+                config.ruleBasedDetectorConfig_.sustainedHighPowerWindow = std::chrono::minutes(parseIntOrThrow(key, value));
             else if (key == "RULE_UNATTENDED_POWER_KW")
                 config.ruleBasedDetectorConfig_.unattendedPowerKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_UNATTENDED_WINDOW_MINUTES")
+                config.ruleBasedDetectorConfig_.unattendedWindow = std::chrono::minutes(parseIntOrThrow(key, value));
             else if (key == "RULE_SUDDEN_POWER_SPIKE_KW")
                 config.ruleBasedDetectorConfig_.suddenPowerSpikeKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_BASELINE_MIN_POWER_SAMPLES")
+                config.ruleBasedDetectorConfig_.baselineMinPowerSamples = parseIntOrThrow(key, value);
+            else if (key == "RULE_BASELINE_SPIKE_MARGIN_KW")
+                config.ruleBasedDetectorConfig_.baselineSpikeMarginKw = parseDoubleOrThrow(key, value);
+            else if (key == "RULE_BASELINE_SUSTAINED_MARGIN_KW")
+                config.ruleBasedDetectorConfig_.baselineSustainedMarginKw = parseDoubleOrThrow(key, value);
             else if (key == "RULE_REPEATED_SPIKE_DELTA_KW")
                 config.ruleBasedDetectorConfig_.repeatedSpikeDeltaKw = parseDoubleOrThrow(key, value);
             else if (key == "RULE_REPEATED_SPIKE_MIN_COUNT")
                 config.ruleBasedDetectorConfig_.repeatedSpikeMinCount = parseIntOrThrow(key, value);
+            else if (key == "RULE_REPEATED_SPIKE_WINDOW_MINUTES")
+                config.ruleBasedDetectorConfig_.repeatedSpikeWindow = std::chrono::minutes(parseIntOrThrow(key, value));
             else if (key == "DETECTION_HISTORY_WINDOW_MINUTES")
                 config.roomStateAggregatorConfig_.historyWindow = std::chrono::minutes(parseIntOrThrow(key, value));
             else if (key == "DB_HOST")
@@ -334,14 +346,26 @@ namespace dorm_energy::application
             ruleBasedDetectorConfig_.extremeLightLux = parseDoubleOrThrow("RULE_EXTREME_LIGHT_LUX", val);
         if (const char *val = std::getenv("RULE_SUSTAINED_HIGH_POWER_KW"))
             ruleBasedDetectorConfig_.sustainedHighPowerKw = parseDoubleOrThrow("RULE_SUSTAINED_HIGH_POWER_KW", val);
+        if (const char *val = std::getenv("RULE_SUSTAINED_HIGH_POWER_WINDOW_MINUTES"))
+            ruleBasedDetectorConfig_.sustainedHighPowerWindow = std::chrono::minutes(parseIntOrThrow("RULE_SUSTAINED_HIGH_POWER_WINDOW_MINUTES", val));
         if (const char *val = std::getenv("RULE_UNATTENDED_POWER_KW"))
             ruleBasedDetectorConfig_.unattendedPowerKw = parseDoubleOrThrow("RULE_UNATTENDED_POWER_KW", val);
+        if (const char *val = std::getenv("RULE_UNATTENDED_WINDOW_MINUTES"))
+            ruleBasedDetectorConfig_.unattendedWindow = std::chrono::minutes(parseIntOrThrow("RULE_UNATTENDED_WINDOW_MINUTES", val));
         if (const char *val = std::getenv("RULE_SUDDEN_POWER_SPIKE_KW"))
             ruleBasedDetectorConfig_.suddenPowerSpikeKw = parseDoubleOrThrow("RULE_SUDDEN_POWER_SPIKE_KW", val);
+        if (const char *val = std::getenv("RULE_BASELINE_MIN_POWER_SAMPLES"))
+            ruleBasedDetectorConfig_.baselineMinPowerSamples = parseIntOrThrow("RULE_BASELINE_MIN_POWER_SAMPLES", val);
+        if (const char *val = std::getenv("RULE_BASELINE_SPIKE_MARGIN_KW"))
+            ruleBasedDetectorConfig_.baselineSpikeMarginKw = parseDoubleOrThrow("RULE_BASELINE_SPIKE_MARGIN_KW", val);
+        if (const char *val = std::getenv("RULE_BASELINE_SUSTAINED_MARGIN_KW"))
+            ruleBasedDetectorConfig_.baselineSustainedMarginKw = parseDoubleOrThrow("RULE_BASELINE_SUSTAINED_MARGIN_KW", val);
         if (const char *val = std::getenv("RULE_REPEATED_SPIKE_DELTA_KW"))
             ruleBasedDetectorConfig_.repeatedSpikeDeltaKw = parseDoubleOrThrow("RULE_REPEATED_SPIKE_DELTA_KW", val);
         if (const char *val = std::getenv("RULE_REPEATED_SPIKE_MIN_COUNT"))
             ruleBasedDetectorConfig_.repeatedSpikeMinCount = parseIntOrThrow("RULE_REPEATED_SPIKE_MIN_COUNT", val);
+        if (const char *val = std::getenv("RULE_REPEATED_SPIKE_WINDOW_MINUTES"))
+            ruleBasedDetectorConfig_.repeatedSpikeWindow = std::chrono::minutes(parseIntOrThrow("RULE_REPEATED_SPIKE_WINDOW_MINUTES", val));
         if (const char *val = std::getenv("DETECTION_HISTORY_WINDOW_MINUTES"))
             roomStateAggregatorConfig_.historyWindow = std::chrono::minutes(parseIntOrThrow("DETECTION_HISTORY_WINDOW_MINUTES", val));
 

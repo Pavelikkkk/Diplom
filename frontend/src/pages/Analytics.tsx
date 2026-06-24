@@ -4,17 +4,18 @@ import {
   getUserStats,
   getUserAnomalies,
   getUserDevices,
+  getAccount,
 } from "../services/api";
-import type { Anomaly, Device } from "../services/api";
+import type { Account, Anomaly, Device } from "../services/api";
 
 import StatCard from "../components/StatCard";
 import AlertCard from "../components/AlertCard";
 
 import PowerChart from "../components/PowerChart";
-import TopConsumersChart from "../components/TopConsumersChart";
 import AnomaliesChart from "../components/AnomaliesChart";
 import SeverityDistributionChart from "../components/SeverityDistributionChart";
 import EnergyByRoomChart from "../components/EnergyByRoomChart";
+import LockedFeature from "./LockedFeature";
 
 export default function Analytics() {
   const [stats, setStats] = useState({
@@ -25,10 +26,28 @@ export default function Analytics() {
   });
 
   const [devices, setDevices] = useState<Device[]>([]);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [loadedAccount, setLoadedAccount] = useState(false);
 
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
 
   useEffect(() => {
+    getAccount()
+      .then(setAccount)
+      .catch(() => setAccount(null))
+      .finally(() => setLoadedAccount(true));
+  }, []);
+
+  useEffect(() => {
+    const hasAnalytics =
+      account?.accountType === "BUSINESS" ||
+      account?.role === "ADMIN" ||
+      account?.subscription.plan === "PRO";
+
+    if (!loadedAccount || !hasAnalytics) {
+      return;
+    }
+
     async function loadAnalytics() {
       try {
         const [statsData, anomaliesData, devicesData] = await Promise.all([
@@ -48,7 +67,22 @@ export default function Analytics() {
     }
 
     loadAnalytics();
-  }, []);
+  }, [account?.accountType, account?.role, account?.subscription.plan, loadedAccount]);
+
+  if (!loadedAccount) {
+    return <div className="text-slate-300">Loading analytics...</div>;
+  }
+
+  if (
+    account?.accountType !== "BUSINESS" &&
+    account?.role !== "ADMIN" &&
+    account?.subscription.plan !== "PRO"
+  ) {
+    return <LockedFeature />;
+  }
+
+  const isBusinessAccount = account.accountType === "BUSINESS" || account.role === "ADMIN";
+  const connectedDeviceTitle = devices.length === 1 ? "Connected Device" : "Connected Devices";
 
   return (
     <div className="space-y-8">
@@ -74,11 +108,11 @@ export default function Analytics() {
               xl:grid-cols-4
               gap-4"
       >
-        <StatCard title="Buildings" value={stats.buildings} />
+        {isBusinessAccount && <StatCard title="Buildings" value={stats.buildings} />}
 
         <StatCard title="Rooms" value={stats.rooms} />
 
-        <StatCard title="Devices" value={devices.length} />
+        <StatCard title={connectedDeviceTitle} value={devices.length} />
 
         <StatCard title="Anomalies" value={stats.anomalies} />
       </div>
@@ -119,12 +153,10 @@ export default function Analytics() {
               xl:grid-cols-2
               gap-5"
       >
-        <TopConsumersChart />
-
         <AnomaliesChart />
-      </div>
 
-      <SeverityDistributionChart />
+        <SeverityDistributionChart />
+      </div>
 
       {/* LATEST ANOMALIES */}
 

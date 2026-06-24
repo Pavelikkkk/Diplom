@@ -99,7 +99,7 @@ namespace dorm_energy::detection
 
             return info;
         }
-    }
+    } // namespace
 
     OnnxDetector::OnnxDetector(
         const std::string &modelPath,

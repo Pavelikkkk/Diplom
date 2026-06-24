@@ -11,5 +11,8 @@ namespace dorm_energy::storage
 
         virtual SubscriptionDto getUserSubscription(
             int userId) = 0;
+
+        virtual SubscriptionDto upgradeUserSubscription(
+            int userId) = 0;
     };
 } // namespace dorm_energy::storage

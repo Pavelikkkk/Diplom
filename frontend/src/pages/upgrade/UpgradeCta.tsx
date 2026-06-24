@@ -1,4 +1,16 @@
-export function UpgradeCta() {
+import { useState } from "react";
+
+import { upgradeSubscription } from "../../services/api";
+
+export function UpgradeCta({ onUpgraded }: { onUpgraded?: () => void }) {
+  const [message, setMessage] = useState("");
+
+  async function handleUpgrade() {
+    const result = await upgradeSubscription();
+    setMessage(result.message);
+    onUpgraded?.();
+  }
+
   return (
     <div
       className="bg-[#111827]
@@ -20,10 +32,11 @@ export function UpgradeCta() {
         className="text-slate-300
         mb-8"
       >
-        Unlock more devices, rooms, buildings and analytics.
+        Unlock more rooms, buildings and analytics.
       </p>
 
       <button
+        onClick={handleUpgrade}
         className="px-10
         py-4
         rounded-2xl
@@ -36,6 +49,11 @@ export function UpgradeCta() {
       >
         Upgrade Subscription
       </button>
+      {message && (
+        <div className="mt-5 font-semibold text-emerald-400">
+          {message}
+        </div>
+      )}
     </div>
   );
 }

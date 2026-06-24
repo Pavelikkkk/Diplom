@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Sidebar from "./Sidebar";
 import { clearToken, type Account, getAccount } from "../services/api";
@@ -14,12 +14,29 @@ const menuIcons = {
 export default function Header() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
+  const profileRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     getAccount()
       .then(setAccount)
       .catch(() => setAccount(null));
   }, []);
+
+  useEffect(() => {
+    if (!profileOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!profileRef.current?.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [profileOpen]);
 
   const username = account?.username ?? "Guest";
 
@@ -36,7 +53,7 @@ export default function Header() {
           </Link>
         </div>
 
-        <div className="relative ml-auto flex items-center gap-3 sm:gap-4">
+        <div ref={profileRef} className="relative ml-auto flex items-center gap-3 sm:gap-4">
           <span className="hidden text-sm text-slate-300 sm:inline md:text-base">
             {username}
           </span>
@@ -59,18 +76,19 @@ export default function Header() {
               </div>
 
               <div className="p-2">
-                <Link to="/account" className="block rounded-lg px-4 py-3 hover:bg-slate-800">
+                <Link onClick={() => setProfileOpen(false)} to="/account" className="block rounded-lg px-4 py-3 hover:bg-slate-800">
                   <span className="mr-2">{menuIcons.account}</span>
                   Account
                 </Link>
                 <Link
                   to="/subscription"
+                  onClick={() => setProfileOpen(false)}
                   className="block rounded-lg px-4 py-3 hover:bg-slate-800"
                 >
                   <span className="mr-2">{menuIcons.subscription}</span>
                   Subscription
                 </Link>
-                <Link to="/settings" className="block rounded-lg px-4 py-3 hover:bg-slate-800">
+                <Link onClick={() => setProfileOpen(false)} to="/settings" className="block rounded-lg px-4 py-3 hover:bg-slate-800">
                   <span className="mr-2">{menuIcons.settings}</span>
                   Settings
                 </Link>

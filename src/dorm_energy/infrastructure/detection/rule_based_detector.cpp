@@ -50,6 +50,21 @@ namespace dorm_energy::detection
                 throw std::invalid_argument("suddenPowerSpikeKw must be greater than zero");
             }
 
+            if (config.baselineMinPowerSamples <= 0)
+            {
+                throw std::invalid_argument("baselineMinPowerSamples must be greater than zero");
+            }
+
+            if (config.baselineSpikeMarginKw <= 0.0)
+            {
+                throw std::invalid_argument("baselineSpikeMarginKw must be greater than zero");
+            }
+
+            if (config.baselineSustainedMarginKw <= 0.0)
+            {
+                throw std::invalid_argument("baselineSustainedMarginKw must be greater than zero");
+            }
+
             if (config.repeatedSpikeDeltaKw <= 0.0)
             {
                 throw std::invalid_argument("repeatedSpikeDeltaKw must be greater than zero");
@@ -66,10 +81,7 @@ namespace dorm_energy::detection
             }
         }
 
-        AnomalyInfo makeNormal()
-        {
-            return {};
-        }
+        AnomalyInfo makeNormal() { return {}; }
 
         AnomalyInfo makeAnomaly(
             std::string anomalyType,
@@ -85,12 +97,6 @@ namespace dorm_energy::detection
             info.score = score;
 
             return info;
-        }
-
-        bool hasInvalidNumbers(
-            const core::RoomState &state)
-        {
-            return !std::isfinite(state.power) || !std::isfinite(state.light);
         }
 
         std::vector<core::RoomState> statesInWindow(
@@ -132,6 +138,7 @@ namespace dorm_energy::detection
             double thresholdKw,
             std::chrono::minutes window)
         {
+
             const auto states = statesInWindow(history, current, window);
 
             if (!coversWindow(states, window))
@@ -139,6 +146,9 @@ namespace dorm_energy::detection
                 return false;
             }
 
+            // Проверяем каждое состояние внутри окна.
+            // Если хотя бы в одном состоянии мощность ниже порога,
+            // значит высокая мощность не была постоянной.
             for (const auto &state : states)
             {
                 if (state.power < thresholdKw)
@@ -147,6 +157,8 @@ namespace dorm_energy::detection
                 }
             }
 
+            // Если все состояния в окне имеют мощность выше порога,
+            // значит есть длительное высокое энергопотребление.
             return true;
         }
 
@@ -165,12 +177,18 @@ namespace dorm_energy::detection
 
             for (const auto &state : states)
             {
+                // Если в какой-то момент было движение
+                // или мощность упала ниже порога,
+                // значит это не unattended power usage.
                 if (state.motion || state.power < thresholdKw)
                 {
                     return false;
                 }
             }
 
+            // Если всё окно не было движения,
+            // но мощность оставалась выше порога,
+            // считаем это потреблением без присутствия человека.
             return true;
         }
 
@@ -179,13 +197,38 @@ namespace dorm_energy::detection
             const core::RoomState &current,
             double spikeDeltaKw)
         {
+
             if (history.empty())
             {
                 return false;
             }
 
             const auto &previous = history.back();
+
+            // Проверяем резкий рост мощности.
+            // Аномалия есть, если текущая мощность выросла относительно предыдущей
+            // минимум на spikeDeltaKw.
             return current.power - previous.power >= spikeDeltaKw;
+        }
+
+        bool hasBaselinePowerSpike(
+            const DetectionContext &context,
+            const RuleBasedDetectorConfig &config)
+        {
+            if (!context.baselineAveragePowerKw.has_value())
+            {
+                return false;
+            }
+
+            if (context.baselinePowerSampleCount < config.baselineMinPowerSamples)
+            {
+                return false;
+            }
+
+            // Проверяем, насколько текущая мощность выше обычного среднего уровня.
+            // Аномалия есть, если:
+            // current power >= baseline average + допустимый margin.
+            return context.current.power >= *context.baselineAveragePowerKw + config.baselineSpikeMarginKw;
         }
 
         bool hasRepeatedPowerSpikes(
@@ -202,18 +245,24 @@ namespace dorm_energy::detection
                 return false;
             }
 
+            // Счётчик резких скачков мощности.
             int spikeCount = 0;
 
             for (std::size_t i = 1; i < states.size(); ++i)
             {
+                // Разница между текущей и предыдущей мощностью.
                 const double delta = states[i].power - states[i - 1].power;
 
+                // Если рост мощности больше или равен порогу,
+                // считаем это одним скачком.
                 if (delta >= spikeDeltaKw)
                 {
                     ++spikeCount;
                 }
             }
 
+            // Аномалия есть, если количество скачков в окне
+            // достигло минимального требуемого количества.
             return spikeCount >= minSpikeCount;
         }
     } // namespace
@@ -230,14 +279,6 @@ namespace dorm_energy::detection
     {
         const auto &state = context.current;
         const auto *history = context.history;
-
-        if (hasInvalidNumbers(state))
-        {
-            return makeAnomaly(
-                "rule_invalid_number",
-                "Room state contains a non-finite numeric value",
-                core::AlertSeverity::Warning);
-        }
 
         if (state.power < 0.0)
         {
@@ -271,15 +312,52 @@ namespace dorm_energy::detection
                 core::AlertSeverity::Info);
         }
 
-        if (history && hasUnattendedPowerUsage(*history, state, config_.unattendedPowerKw, config_.unattendedWindow))
+        // Проверяем, готов ли baseline для использования.
+        // Baseline готов, если средняя базовая мощность уже рассчитана
+        // и количество измерений достаточно для доверия к этому значению.
+        const bool baselineReady =
+            context.baselineAveragePowerKw.has_value() && context.baselinePowerSampleCount >= config_.baselineMinPowerSamples;
+
+        // Рассчитываем порог высокой мощности на основе baseline.
+        // Если baseline готов, берём среднюю базовую мощность и добавляем допустимый запас.
+        // Если baseline не готов, используем стандартный порог sustainedHighPowerKw из config_.
+        const double baselineSustainedPowerKw =
+            baselineReady ? *context.baselineAveragePowerKw + config_.baselineSustainedMarginKw : config_.sustainedHighPowerKw;
+
+        // Определяем итоговый порог для правила длительного высокого потребления.
+        // Если baseline готов, используем порог на основе baseline.
+        // Если baseline не готов, берём maxNormalPowerKw из профиля комнаты,
+        // а если его нет — используем дефолтный sustainedHighPowerKw из config_.
+        const double sustainedHighPowerKw =
+            baselineReady ? baselineSustainedPowerKw : context.maxNormalPowerKw.value_or(config_.sustainedHighPowerKw);
+
+        // Определяем итоговый порог для правила потребления без присутствия.
+        // Если baseline готов, используем тот же baseline-based порог.
+        // Если baseline не готов, берём maxNormalPowerKw из профиля комнаты,
+        // а если его нет — используем дефолтный unattendedPowerKw из config_.
+        const double unattendedPowerKw =
+            baselineReady ? baselineSustainedPowerKw : context.maxNormalPowerKw.value_or(config_.unattendedPowerKw);
+
+        // Проверяем правило потребления энергии без присутствия человека.
+        // Условие срабатывает только если есть история состояний,
+        // в профиле комнаты запрещено unattended-потребление,
+        // и в течение заданного окна мощность была высокой,
+        // пока движение не фиксировалось.        
+        if (history && !context.allowUnattendedPower &&
+            hasUnattendedPowerUsage(*history, state, unattendedPowerKw, config_.unattendedWindow))
         {
             return makeAnomaly(
                 "rule_unattended_power_usage",
                 "Power stayed high while no motion was detected for a long period",
-                core::AlertSeverity::Warning);
+                core::AlertSeverity::Critical);
         }
 
-        if (history && hasSustainedHighPower(*history, state, config_.sustainedHighPowerKw, config_.sustainedHighPowerWindow))
+        // Проверяем правило длительного высокого энергопотребления.
+        // Условие срабатывает, если есть история состояний
+        // и мощность оставалась выше порога sustainedHighPowerKw
+        // в течение configured sustainedHighPowerWindow.
+        if (history &&
+            hasSustainedHighPower(*history, state, sustainedHighPowerKw, config_.sustainedHighPowerWindow))
         {
             return makeAnomaly(
                 "rule_sustained_high_power",
@@ -287,6 +365,22 @@ namespace dorm_energy::detection
                 core::AlertSeverity::Warning);
         }
 
+        // Проверяем скачок мощности относительно baseline.
+        // Это правило сравнивает текущую мощность
+        // со средней базовой мощностью комнаты/устройства.
+        // Если текущее значение выше baseline + margin,
+        // создаётся информационная аномалия.
+        if (hasBaselinePowerSpike(context, config_))
+        {
+            return makeAnomaly(
+                "rule_baseline_power_spike",
+                "Power consumption is above the learned room baseline",
+                core::AlertSeverity::Info);
+        }
+
+        // Проверяем повторяющиеся скачки мощности.
+        // Условие срабатывает, если в заданном временном окне
+        // количество резких ростов мощности достигло repeatedSpikeMinCount.
         if (history && hasRepeatedPowerSpikes(*history, state, config_.repeatedSpikeDeltaKw, config_.repeatedSpikeMinCount, config_.repeatedSpikeWindow))
         {
             return makeAnomaly(
@@ -295,6 +389,10 @@ namespace dorm_energy::detection
                 core::AlertSeverity::Info);
         }
 
+        // Проверяем внезапный скачок мощности.
+        // Сравнивается текущее значение мощности с предыдущим состоянием.
+        // Если рост больше или равен suddenPowerSpikeKw,
+        // создаётся информационная аномалия.
         if (history && hasSuddenPowerSpike(*history, state, config_.suddenPowerSpikeKw))
         {
             return makeAnomaly(

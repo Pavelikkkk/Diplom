@@ -5,6 +5,7 @@
 #include <chrono>
 #include <mqtt/async_client.h>
 #include <mutex>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -13,13 +14,12 @@ namespace dorm_energy::mqtt
 {
     namespace
     {
-        constexpr int Qos = 1;
+        constexpr int Qos = 1; // в кониг
 
         bool usesTls(
             const std::string &broker)
         {
-            return broker.rfind("ssl://", 0) == 0 ||
-                   broker.rfind("wss://", 0) == 0;
+            return broker.rfind("ssl://", 0) == 0 || broker.rfind("wss://", 0) == 0;
         }
     }
 
@@ -46,8 +46,8 @@ namespace dorm_energy::mqtt
         void subscribe(
             const std::string &topic);
 
-        void subscribe(
-            const std::vector<std::string> &topics);
+        // void subscribe(
+        //     const std::vector<std::string> &topics);
 
         void unsubscribe(
             const std::string &topic);
@@ -81,7 +81,8 @@ namespace dorm_energy::mqtt
             bool tlsVerify) const;
 
         void handleIncomingPayload(
-            const std::string &payload);
+            const std::string &payload,
+            const std::string &topic);
 
     private:
         std::unique_ptr<::mqtt::async_client> client_;
@@ -127,8 +128,7 @@ namespace dorm_energy::mqtt
             return;
         }
 
-        parent_.handleIncomingPayload(
-            message->to_string());
+        parent_.handleIncomingPayload(message->to_string(), message->get_topic());
     }
 
     MqttClient::Impl::Impl()
@@ -161,28 +161,23 @@ namespace dorm_energy::mqtt
             throw std::invalid_argument("MQTT clientId must not be empty");
         }
 
-        client_ =
-            std::make_unique<::mqtt::async_client>(
-                broker,
-                clientId);
+        client_ = std::make_unique<::mqtt::async_client>(
+            broker,
+            clientId);
 
-        client_->set_callback(
-            *callbackHandler_);
+        client_->set_callback(*callbackHandler_);
 
-        connectionOptions_ =
-            makeConnectOptions(
-                broker,
-                username,
-                password,
-                tlsVerify);
+        connectionOptions_ = makeConnectOptions(
+            broker,
+            username,
+            password,
+            tlsVerify);
 
         try
         {
-            auto token =
-                client_->connect(connectionOptions_);
+            auto token = client_->connect(connectionOptions_);
 
-            token->wait_for(
-                std::chrono::seconds{10});
+            token->wait_for(std::chrono::seconds{10});
 
             connected_ = true;
 
@@ -253,21 +248,10 @@ namespace dorm_energy::mqtt
 
         try
         {
-            client_->subscribe(
-                topic,
-                Qos)->wait();
+            client_->subscribe(topic, Qos)->wait();
         }
         catch (const ::mqtt::exception &)
         {
-        }
-    }
-
-    void MqttClient::Impl::subscribe(
-        const std::vector<std::string> &topics)
-    {
-        for (const auto &topic : topics)
-        {
-            subscribe(topic);
         }
     }
 
@@ -298,12 +282,10 @@ namespace dorm_energy::mqtt
     void MqttClient::Impl::setHandler(
         std::unique_ptr<application::IMessageHandler> handler)
     {
-        handler_ =
-            std::move(handler);
+        handler_ = std::move(handler);
     }
 
-    ::mqtt::connect_options
-    MqttClient::Impl::makeConnectOptions(
+    ::mqtt::connect_options MqttClient::Impl::makeConnectOptions(
         const std::string &broker,
         const std::string &username,
         const std::string &password,
@@ -325,7 +307,7 @@ namespace dorm_energy::mqtt
         if (usesTls(broker))
         {
             ::mqtt::ssl_options sslOptions;
-            sslOptions.set_enable_server_cert_auth(tlsVerify);
+            sslOptions.set_enable_server_cert_auth(tlsVerify); // только для тестов
 
             options.set_ssl(sslOptions);
         }
@@ -334,33 +316,38 @@ namespace dorm_energy::mqtt
     }
 
     void MqttClient::Impl::handleIncomingPayload(
-        const std::string &payload)
+        const std::string &payload,
+        const std::string &topic)
     {
         if (!running_)
         {
+            spdlog::debug("MQTT payload ignored because client is not running");
             return;
         }
 
         if (!handler_)
         {
+            spdlog::warn("MQTT payload ignored because message handler is not configured");
             return;
         }
 
-        const auto reading =
-            parser_.parse(payload);
+        const auto reading = parser_.parse(payload);
 
         if (!reading.has_value())
         {
+            spdlog::warn("MQTT payload ignored because it could not be parsed: topic={} bytes={} payload={}",
+                         topic, payload.size(), payload.empty() ? "<empty>" : payload);
             return;
         }
 
-        handler_->handle(
-            reading.value());
+        spdlog::info("[MessageParser] Parsed: {} | {} | {:.2f} {}",
+                     reading->deviceId, reading->sensorType, reading->value, reading->unit);
+
+        handler_->handle(reading.value());
     }
 
     MqttClient::MqttClient()
-        : pimpl_(
-              std::make_unique<Impl>())
+        : pimpl_(std::make_unique<Impl>())
     {
     }
 
@@ -402,12 +389,6 @@ namespace dorm_energy::mqtt
         pimpl_->subscribe(topic);
     }
 
-    void MqttClient::subscribe(
-        const std::vector<std::string> &topics)
-    {
-        pimpl_->subscribe(topics);
-    }
-
     void MqttClient::unsubscribe(
         const std::string &topic)
     {
@@ -417,7 +398,6 @@ namespace dorm_energy::mqtt
     void MqttClient::setHandler(
         std::unique_ptr<application::IMessageHandler> handler)
     {
-        pimpl_->setHandler(
-            std::move(handler));
+        pimpl_->setHandler(std::move(handler));
     }
 } // namespace dorm_energy::mqtt

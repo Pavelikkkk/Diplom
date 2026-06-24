@@ -22,6 +22,8 @@ namespace dorm_energy::storage
 
         std::string roomName;
 
+        std::string mqttTopic;
+
         bool isOnline = false;
 
         std::string lastSeenAt;

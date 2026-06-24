@@ -13,7 +13,6 @@ namespace dorm_energy::application::factories
 
     std::unique_ptr<simulation::IDataGenerator> SimulationFactory::createGenerator() const
     {
-        return std::make_unique<simulation::SyntheticDataGenerator>(
-            config_.getGeneratorConfig());
+        return std::make_unique<simulation::SyntheticDataGenerator>(config_.getGeneratorConfig());
     }
 } // namespace dorm_energy::application::factories

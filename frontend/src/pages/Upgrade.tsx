@@ -8,10 +8,16 @@ export default function Upgrade() {
   const [account, setAccount] = useState<Account | null>(null);
 
   useEffect(() => {
-    getAccount()
-      .then(setAccount)
-      .catch(() => setAccount(null));
+    void loadAccount();
   }, []);
+
+  async function loadAccount() {
+    try {
+      setAccount(await getAccount());
+    } catch {
+      setAccount(null);
+    }
+  }
 
   const isBusiness = account?.accountType === "BUSINESS";
   const currentPlan = account?.subscription.plan ?? "STANDARD";
@@ -34,7 +40,7 @@ export default function Upgrade() {
         <PersonalPlans currentPlan={currentPlan} />
       )}
 
-      <UpgradeCta />
+      <UpgradeCta onUpgraded={loadAccount} />
     </div>
   );
 }

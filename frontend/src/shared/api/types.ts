@@ -5,7 +5,6 @@ export type Subscription = {
   status: string;
   maxBuildings: number;
   maxRooms: number;
-  maxDevices: number;
 };
 
 export type Account = {
@@ -41,6 +40,9 @@ export type Room = {
   roomName: string;
   roomType?: string;
   floorNumber?: number;
+  minNormalPowerKw?: number;
+  maxNormalPowerKw?: number;
+  allowUnattendedPower?: boolean;
   buildingName: string;
   deviceCount?: number;
   motion: boolean;
@@ -61,6 +63,7 @@ export type Device = {
   organizationId: number;
   roomName: string;
   buildingName?: string;
+  mqttTopic?: string;
   isOnline: boolean;
   lastSeenAt: string;
 };
@@ -118,6 +121,7 @@ export type AdminBuilding = {
   organizationId: number;
   name: string;
   address: string;
+  description: string;
 };
 
 export type AdminRoom = {
@@ -126,10 +130,28 @@ export type AdminRoom = {
   roomName: string;
   roomType: string;
   floorNumber: number;
+  minNormalPowerKw?: number;
+  maxNormalPowerKw?: number;
+  allowUnattendedPower?: boolean;
+};
+
+export type AdminDevice = {
+  deviceId: string;
+  deviceName: string;
+  deviceModel: string;
+  firmwareVersion: string;
+  roomId: number;
+  roomName: string;
+  buildingId: number;
+  organizationId: number;
+  mqttTopic: string;
+  isOnline: boolean;
+  lastSeenAt: string;
 };
 
 export type AdminOverview = {
   users: AdminUser[];
   buildings: AdminBuilding[];
   rooms: AdminRoom[];
+  devices: AdminDevice[];
 };

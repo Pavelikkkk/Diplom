@@ -12,11 +12,28 @@ export async function getUserRooms() {
     buildingId: Number(room.buildingId ?? 0),
     name: String(room.roomName ?? room.name ?? ""),
     roomName: String(room.roomName ?? room.name ?? ""),
+    roomType: String(room.roomType ?? ""),
+    floorNumber: Number(room.floorNumber ?? 0),
     buildingName: String(room.buildingName ?? ""),
+    minNormalPowerKw: Number(room.minNormalPowerKw ?? 0),
+    maxNormalPowerKw: Number(room.maxNormalPowerKw ?? 2.8),
+    allowUnattendedPower: Boolean(room.allowUnattendedPower ?? false),
     motion: Boolean(room.motion ?? false),
     power: Number(room.power ?? 0),
     light: Number(room.light ?? 0),
   }));
+}
+
+export async function createUserRoom(input: {
+  buildingId?: number;
+  roomName: string;
+  roomType?: string;
+  floorNumber?: number;
+}) {
+  return request<{ id: number }>("/rooms", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getUserRoom(id: string) {

@@ -25,7 +25,24 @@ namespace dorm_energy::notifier
             return size * nmemb;
         }
 
-        std::string severityEmoji(
+        std::string severityLabel(
+            core::AlertSeverity severity)
+        {
+            switch (severity)
+            {
+            case core::AlertSeverity::Critical:
+                return "CRITICAL";
+
+            case core::AlertSeverity::Warning:
+                return "WARNING";
+
+            case core::AlertSeverity::Info:
+            default:
+                return "INFO";
+            }
+        }
+
+        std::string severityIcon(
             core::AlertSeverity severity)
         {
             switch (severity)
@@ -177,32 +194,27 @@ namespace dorm_energy::notifier
     {
         std::ostringstream stream;
 
-        stream << severityEmoji(message.severity) << " Dorm Energy Alert\n";
+        stream << severityIcon(message.severity) << " Dorm Energy Alert\n";
+        stream << "Status: " << severityLabel(message.severity) << "\n";
 
         if (!message.title.empty())
         {
-            stream << "\n"
-                   << message.title << "\n";
-        }
-
-        if (!message.body.empty())
-        {
-            stream << "\n"
-                   << message.body << "\n";
+            stream << "Event: " << message.title << "\n";
         }
 
         if (!message.deviceId.empty())
         {
-            stream << "\nDevice: " << message.deviceId;
+            stream << "Device: " << message.deviceId << "\n";
         }
-
-        stream
-            << "\nSeverity: "
-            << core::toString(message.severity);
 
         if (message.timestamp != core::TimePoint{})
         {
-            stream << "\nTime: " << core::formatLocalTimestamp(message.timestamp);
+            stream << "Time: " << core::formatLocalTimestamp(message.timestamp);
+        }
+
+        if (!message.body.empty())
+        {
+            stream << "\n\n" << message.body;
         }
 
         return stream.str();

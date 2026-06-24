@@ -54,7 +54,7 @@ BEGIN
         (
             'admin',
             'admin@dorm.energy',
-            '2db100b112d4a65a0efd771be729f45e50a263341008f5f9ba54d988dc4bad1e',
+            '$2b$10$D21nxYuXmLPONxmbYD1uCeu9jKqQBVtkPVuBHywwQO6F/uePShACe',
             'ADMIN',
             admin_org_id,
             'BUSINESS',
@@ -66,7 +66,7 @@ BEGIN
         SET
             username = 'admin',
             email = 'admin@dorm.energy',
-            password_hash = '2db100b112d4a65a0efd771be729f45e50a263341008f5f9ba54d988dc4bad1e',
+            password_hash = '$2b$10$D21nxYuXmLPONxmbYD1uCeu9jKqQBVtkPVuBHywwQO6F/uePShACe',
             role = 'ADMIN',
             organization_id = admin_org_id,
             account_type = 'BUSINESS',

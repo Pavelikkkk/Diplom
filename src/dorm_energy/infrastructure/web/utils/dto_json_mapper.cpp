@@ -40,6 +40,7 @@ namespace dorm_energy::web
         json["deviceModel"] = dto.deviceModel;
         json["firmwareVersion"] = dto.firmwareVersion;
         json["roomName"] = dto.roomName;
+        json["mqttTopic"] = dto.mqttTopic;
         json["roomId"] = dto.roomId;
         json["buildingId"] = dto.buildingId;
         json["organizationId"] = dto.organizationId;
@@ -72,6 +73,12 @@ namespace dorm_energy::web
         json["roomName"] = dto.roomName;
         json["roomType"] = dto.roomType;
         json["floorNumber"] = dto.floorNumber;
+        json["minNormalPowerKw"] = dto.minNormalPowerKw;
+        json["maxNormalPowerKw"] = dto.maxNormalPowerKw;
+        json["allowUnattendedPower"] = dto.allowUnattendedPower;
+        json["motion"] = dto.motion;
+        json["power"] = dto.power;
+        json["light"] = dto.light;
         return json;
     }
 

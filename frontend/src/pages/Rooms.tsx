@@ -1,21 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
-import { getUserRooms, getUserBuildings, getUserDevices } from "../services/api";
-import type { Building, Device, Room } from "../services/api";
+import { createUserRoom, getAccount, getUserRooms, getUserBuildings, getUserDevices } from "../services/api";
+import type { Account, Building, Device, Room } from "../services/api";
 
 const roomIcon = "\u{1F6AA}";
 const arrow = "\u2192";
+const namePattern = /^(?=.*[A-Za-z0-9])[A-Za-z0-9 #.,'_-]{2,80}$/;
 
 export default function Rooms() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [account, setAccount] = useState<Account | null>(null);
   const [search, setSearch] = useState("");
   const [selectedBuilding, setSelectedBuilding] = useState("all");
+  const [form, setForm] = useState({
+    roomName: "",
+  });
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    async function loadData() {
+  async function loadData() {
       try {
         const [roomsData, buildingsData, devicesData] = await Promise.all([
           getUserRooms(),
@@ -31,8 +36,40 @@ export default function Rooms() {
       }
     }
 
-    loadData();
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    getAccount()
+      .then(setAccount)
+      .catch(() => setAccount(null));
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
+
+  async function handleCreateRoom(event: FormEvent) {
+    event.preventDefault();
+    setMessage("");
+
+    const roomName = form.roomName.trim();
+
+    if (!namePattern.test(roomName)) {
+      setMessage("Use a readable room name with at least one letter or number.");
+      return;
+    }
+
+    const result = await createUserRoom({
+      roomName,
+      buildingId: selectedBuilding === "all" ? undefined : Number(selectedBuilding),
+    });
+
+    setMessage(`Room created. ID: ${result.id}`);
+    setForm({
+      roomName: "",
+    });
+    await loadData();
+  }
 
   const filteredRooms = rooms.filter((room) => {
     const matchesSearch = room.name.toLowerCase().includes(search.toLowerCase());
@@ -41,6 +78,8 @@ export default function Rooms() {
 
     return matchesSearch && matchesBuilding;
   });
+
+  const showBuildingFilter = account?.accountType === "BUSINESS" || account?.role === "ADMIN";
 
   return (
     <div className="space-y-8 2xl:space-y-10">
@@ -53,7 +92,7 @@ export default function Rooms() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-4 ${showBuildingFilter ? "md:grid-cols-2" : ""}`}>
         <input
           type="text"
           placeholder="Search rooms..."
@@ -62,19 +101,38 @@ export default function Rooms() {
           className="rounded-lg border border-cyan-700/40 bg-[#111827] p-4 text-base outline-none focus:border-cyan-400 md:p-5 md:text-lg"
         />
 
-        <select
-          value={selectedBuilding}
-          onChange={(e) => setSelectedBuilding(e.target.value)}
-          className="rounded-lg border border-cyan-700/40 bg-[#111827] p-4 text-base outline-none focus:border-cyan-400 md:p-5 md:text-lg"
-        >
-          <option value="all">All Buildings</option>
-          {buildings.map((building) => (
-            <option key={building.id} value={building.id}>
-              {building.name}
-            </option>
-          ))}
-        </select>
+        {showBuildingFilter && (
+          <select
+            value={selectedBuilding}
+            onChange={(e) => setSelectedBuilding(e.target.value)}
+            className="rounded-lg border border-cyan-700/40 bg-[#111827] p-4 text-base outline-none focus:border-cyan-400 md:p-5 md:text-lg"
+          >
+            <option value="all">All Buildings</option>
+            {buildings.map((building) => (
+              <option key={building.id} value={building.id}>
+                {building.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
+
+      <form
+        onSubmit={handleCreateRoom}
+        className="grid grid-cols-1 gap-4 rounded-lg border border-cyan-700/40 bg-[#111827] p-5 md:grid-cols-[1fr_auto]"
+      >
+        <input
+          value={form.roomName}
+          onChange={(event) => setForm({ ...form, roomName: event.target.value })}
+          placeholder="Room name"
+          required
+          className="rounded-lg border border-cyan-700/40 bg-slate-950 p-3 outline-none focus:border-cyan-400"
+        />
+        <button className="rounded-lg bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400">
+          Create Room
+        </button>
+        {message && <div className="text-cyan-300 md:col-span-2">{message}</div>}
+      </form>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:gap-6">
         {filteredRooms.map((room) => {

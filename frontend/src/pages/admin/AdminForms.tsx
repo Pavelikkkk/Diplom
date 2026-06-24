@@ -1,4 +1,5 @@
 import type { AdminBuilding, AdminOverview, AdminRoom } from "../../services/api";
+import { AdminPicker } from "./AdminPicker";
 
 const fieldClass = `w-full
 px-4
@@ -29,6 +30,7 @@ type CreateBuildingFormProps = {
   buildingName: string;
   buildingAddress: string;
   buildingDescription: string;
+  error: string;
   onSubmit: (event: React.FormEvent) => void;
   onOrganizationChange: (value: number) => void;
   onBuildingNameChange: (value: string) => void;
@@ -42,6 +44,7 @@ export function CreateBuildingForm({
   buildingName,
   buildingAddress,
   buildingDescription,
+  error,
   onSubmit,
   onOrganizationChange,
   onBuildingNameChange,
@@ -60,25 +63,25 @@ export function CreateBuildingForm({
         Create Building
       </h2>
 
-      <select
+      <AdminPicker
         value={selectedOrganizationId}
-        onChange={(event) => onOrganizationChange(Number(event.target.value))}
-        className={fieldClass}
-      >
-        {overview.users
+        onChange={onOrganizationChange}
+        placeholder="Select workspace"
+        options={overview.users
           .filter((user) => user.organizationId > 0)
-          .map((user) => (
-            <option
-              key={user.id}
-              value={user.organizationId}
-            >
-              {user.username} - {user.organizationName}
-            </option>
-          ))}
-      </select>
+          .map((user) => ({
+            value: user.organizationId,
+            label: user.username,
+            detail: user.organizationName || `Workspace ${user.organizationId}`,
+          }))}
+      />
 
       <input
         required
+        minLength={2}
+        maxLength={80}
+        pattern="(?=.*[A-Za-z0-9])[A-Za-z0-9 #.,'_-]{2,80}"
+        title="Use a readable name with at least one letter or number."
         placeholder="Building name"
         value={buildingName}
         onChange={(event) => onBuildingNameChange(event.target.value)}
@@ -86,6 +89,11 @@ export function CreateBuildingForm({
       />
 
       <input
+        required
+        minLength={3}
+        maxLength={120}
+        pattern="(?=.*[A-Za-z0-9])[A-Za-z0-9 #.,'_-]{3,120}"
+        title="Use a readable address with letters or numbers."
         placeholder="Address"
         value={buildingAddress}
         onChange={(event) => onBuildingAddressChange(event.target.value)}
@@ -99,6 +107,8 @@ export function CreateBuildingForm({
         className={fieldClass}
       />
 
+      {error && <div className="text-sm text-rose-300">{error}</div>}
+
       <button className={buttonClass}>Create</button>
     </form>
   );
@@ -110,6 +120,7 @@ type CreateRoomFormProps = {
   roomName: string;
   roomType: string;
   floorNumber: number;
+  error: string;
   onSubmit: (event: React.FormEvent) => void;
   onBuildingChange: (value: number) => void;
   onRoomNameChange: (value: string) => void;
@@ -123,6 +134,7 @@ export function CreateRoomForm({
   roomName,
   roomType,
   floorNumber,
+  error,
   onSubmit,
   onBuildingChange,
   onRoomNameChange,
@@ -141,24 +153,25 @@ export function CreateRoomForm({
         Create Room
       </h2>
 
-      <select
+      <AdminPicker
         value={selectedBuildingId}
-        onChange={(event) => onBuildingChange(Number(event.target.value))}
-        className={fieldClass}
-      >
-        <option value={0}>Select building</option>
-        {buildings.map((building) => (
-          <option
-            key={building.id}
-            value={building.id}
-          >
-            {building.name}
-          </option>
-        ))}
-      </select>
+        onChange={onBuildingChange}
+        placeholder="Select building"
+        allowEmpty
+        emptyLabel="Select building"
+        options={buildings.map((building) => ({
+          value: building.id,
+          label: building.name,
+          detail: building.address,
+        }))}
+      />
 
       <input
         required
+        minLength={2}
+        maxLength={80}
+        pattern="(?=.*[A-Za-z0-9])[A-Za-z0-9 #.,'_-]{2,80}"
+        title="Use a readable name with at least one letter or number."
         placeholder="Room name"
         value={roomName}
         onChange={(event) => onRoomNameChange(event.target.value)}
@@ -167,6 +180,10 @@ export function CreateRoomForm({
 
       <input
         required
+        minLength={2}
+        maxLength={40}
+        pattern="(?=.*[A-Za-z0-9])[A-Za-z0-9 _-]{2,40}"
+        title="Use a readable room type."
         placeholder="Room type"
         value={roomType}
         onChange={(event) => onRoomTypeChange(event.target.value)}
@@ -175,10 +192,14 @@ export function CreateRoomForm({
 
       <input
         type="number"
+        min={-10}
+        max={200}
         value={floorNumber}
         onChange={(event) => onFloorNumberChange(Number(event.target.value))}
         className={fieldClass}
       />
+
+      {error && <div className="text-sm text-rose-300">{error}</div>}
 
       <button
         disabled={!selectedBuildingId}
@@ -197,6 +218,7 @@ type CreateDeviceFormProps = {
   deviceName: string;
   deviceModel: string;
   firmwareVersion: string;
+  error: string;
   onSubmit: (event: React.FormEvent) => void;
   onRoomChange: (value: number) => void;
   onDeviceIdChange: (value: string) => void;
@@ -212,6 +234,7 @@ export function CreateDeviceForm({
   deviceName,
   deviceModel,
   firmwareVersion,
+  error,
   onSubmit,
   onRoomChange,
   onDeviceIdChange,
@@ -231,24 +254,21 @@ export function CreateDeviceForm({
         Create Device
       </h2>
 
-      <select
+      <AdminPicker
         value={selectedRoomId}
-        onChange={(event) => onRoomChange(Number(event.target.value))}
-        className={fieldClass}
-      >
-        <option value={0}>Select room</option>
-        {rooms.map((room) => (
-          <option
-            key={room.id}
-            value={room.id}
-          >
-            {room.roomName}
-          </option>
-        ))}
-      </select>
+        onChange={onRoomChange}
+        placeholder="Select room"
+        options={rooms.map((room) => ({
+          value: room.id,
+          label: room.roomName,
+          detail: `${room.roomType} - floor ${room.floorNumber}`,
+        }))}
+      />
 
       <input
         required
+        minLength={2}
+        maxLength={80}
         placeholder="Device id"
         value={deviceId}
         onChange={(event) => onDeviceIdChange(event.target.value)}
@@ -257,6 +277,8 @@ export function CreateDeviceForm({
 
       <input
         required
+        minLength={2}
+        maxLength={100}
         placeholder="Device name"
         value={deviceName}
         onChange={(event) => onDeviceNameChange(event.target.value)}
@@ -264,19 +286,28 @@ export function CreateDeviceForm({
       />
 
       <input
+        required
+        minLength={2}
+        maxLength={60}
+        placeholder="Device model"
         value={deviceModel}
         onChange={(event) => onDeviceModelChange(event.target.value)}
         className={fieldClass}
       />
 
       <input
+        required
+        minLength={2}
+        maxLength={40}
+        placeholder="Firmware version"
         value={firmwareVersion}
         onChange={(event) => onFirmwareVersionChange(event.target.value)}
         className={fieldClass}
       />
 
+      {error && <div className="text-sm text-rose-300">{error}</div>}
+
       <button
-        disabled={!selectedRoomId}
         className={buttonClass}
       >
         Create

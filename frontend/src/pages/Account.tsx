@@ -142,11 +142,6 @@ export default function Account() {
               <div className="text-slate-300">Rooms</div>
               <div className="text-xl">{account.subscription.maxRooms}</div>
             </div>
-
-            <div>
-              <div className="text-slate-300">Devices</div>
-              <div className="text-xl">{account.subscription.maxDevices}</div>
-            </div>
           </div>
         </div>
 

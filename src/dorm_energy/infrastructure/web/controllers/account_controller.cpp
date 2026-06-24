@@ -103,5 +103,34 @@ namespace dorm_energy::web
                 callback(makeJsonResponse(json, status));
             },
             {drogon::Get});
+
+        drogon::app().registerHandler(
+            "/api/subscription/upgrade",
+            [subscriptionRepository, auth](const drogon::HttpRequestPtr &req,
+                                           std::function<void(const drogon::HttpResponsePtr &)> &&callback)
+            {
+                Json::Value json;
+                auto status = drogon::k200OK;
+
+                try
+                {
+                    auto user = auth.requireAuthenticatedUser(req);
+
+                    const auto subscription = subscriptionRepository->upgradeUserSubscription(user.id);
+                    json["subscription"] = toJson(subscription);
+                    json["message"] = user.accountType == "BUSINESS"
+                        ? "Subscription upgraded to ENTERPRISE"
+                        : "Subscription upgraded to PRO";
+                    json["success"] = true;
+                }
+                catch (const std::exception &ex)
+                {
+                    json = makeErrorJson(ex);
+                    status = statusForError(ex.what());
+                }
+
+                callback(makeJsonResponse(json, status));
+            },
+            {drogon::Post});
     }
 } // namespace dorm_energy::web

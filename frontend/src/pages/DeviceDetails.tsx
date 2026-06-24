@@ -1,22 +1,27 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { getUserDevice } from "../services/api";
-import type { Device } from "../services/api";
+import { getAccount, getUserDevice } from "../services/api";
+import type { Account, Device } from "../services/api";
 
 export default function DeviceDetails() {
   const { id } = useParams();
 
   const [device, setDevice] = useState<Device | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDevice() {
       try {
-        const current = await getUserDevice(id!);
+        const [current, loadedAccount] = await Promise.all([
+          getUserDevice(id!),
+          getAccount().catch(() => null),
+        ]);
 
         setDevice(current ?? null);
+        setAccount(loadedAccount);
       } catch (error) {
         console.error(error);
       } finally {
@@ -46,6 +51,9 @@ export default function DeviceDetails() {
       </div>
     );
   }
+
+  const isAdmin = account?.role === "ADMIN";
+  const mqttTopic = device.mqttTopic ?? `devices/${device.deviceId}/+`;
 
   return (
     <div className="space-y-8">
@@ -197,6 +205,16 @@ export default function DeviceDetails() {
 
             <span>{device.lastSeenAt || "N/A"}</span>
           </div>
+
+          {isAdmin && (
+            <div className="flex
+                  justify-between
+                  gap-4">
+              <span className="text-slate-300">MQTT Topic</span>
+
+              <span className="break-all text-right text-cyan-300">{mqttTopic}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

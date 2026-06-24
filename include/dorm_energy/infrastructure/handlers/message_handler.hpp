@@ -6,6 +6,7 @@
 #include "dorm_energy/core/measurement.hpp"
 #include "dorm_energy/domain/detection/istate_detector.hpp"
 #include "dorm_energy/domain/storage/repositories/ianomaly_repository.hpp"
+#include "dorm_energy/domain/storage/repositories/idevice_catalog_repository.hpp"
 #include "dorm_energy/domain/storage/repositories/imeasurement_repository.hpp"
 #include "dorm_energy/infrastructure/detection/anomaly_tracker.hpp"
 #include "dorm_energy/infrastructure/detection/room_state_aggregator.hpp"
@@ -22,6 +23,7 @@ namespace dorm_energy::handlers
             std::unique_ptr<detection::IStateDetector> detector,
             std::shared_ptr<storage::IMeasurementRepository> measurementRepository,
             std::shared_ptr<storage::IAnomalyRepository> anomalyRepository,
+            std::shared_ptr<storage::IDeviceCatalogRepository> catalogRepository,
             std::unique_ptr<notification::INotifier> notifier,
             std::shared_ptr<detection::RoomStateAggregator> aggregator);
 
@@ -41,6 +43,8 @@ namespace dorm_energy::handlers
         std::shared_ptr<storage::IMeasurementRepository> measurementRepository_;
 
         std::shared_ptr<storage::IAnomalyRepository> anomalyRepository_;
+
+        std::shared_ptr<storage::IDeviceCatalogRepository> catalogRepository_;
 
         std::unique_ptr<notification::INotifier> notifier_;
 

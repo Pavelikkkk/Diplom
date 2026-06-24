@@ -43,6 +43,36 @@ TEST(MessageParserTest, ParsesSnakeCaseBooleanPayload)
     EXPECT_TRUE(reading->boolValue.value());
 }
 
+TEST(MessageParserTest, TreatsNumericMotionValueAsBoolean)
+{
+    const MessageParser parser;
+
+    const auto reading = parser.parse(
+        R"({"deviceId":"room101","sensorType":"motion","value":1,"unit":"bool"})");
+
+    ASSERT_TRUE(reading.has_value());
+    EXPECT_EQ(reading->deviceId, "room101");
+    EXPECT_EQ(reading->sensorType, "motion");
+    ASSERT_TRUE(reading->boolValue.has_value());
+    EXPECT_TRUE(reading->boolValue.value());
+    EXPECT_DOUBLE_EQ(reading->value, 1.0);
+    EXPECT_EQ(reading->unit, "bool");
+}
+
+TEST(MessageParserTest, ConvertsPowerWattsToKilowatts)
+{
+    const MessageParser parser;
+
+    const auto reading = parser.parse(
+        R"({"deviceId":"room101","sensorType":"power","value":702.5,"unit":"W"})");
+
+    ASSERT_TRUE(reading.has_value());
+    EXPECT_EQ(reading->deviceId, "room101");
+    EXPECT_EQ(reading->sensorType, "power");
+    EXPECT_DOUBLE_EQ(reading->value, 0.7025);
+    EXPECT_EQ(reading->unit, "kW");
+}
+
 TEST(MessageParserTest, UsesDocumentedDefaultsForMissingFields)
 {
     const MessageParser parser;

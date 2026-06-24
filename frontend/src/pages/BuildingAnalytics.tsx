@@ -11,6 +11,10 @@ import type { Anomaly, Building, Device, Room } from "../services/api";
 
 import StatCard from "../components/StatCard";
 import AlertCard from "../components/AlertCard";
+import PowerChart from "../components/PowerChart";
+import EnergyByRoomChart from "../components/EnergyByRoomChart";
+import AnomaliesChart from "../components/AnomaliesChart";
+import SeverityDistributionChart from "../components/SeverityDistributionChart";
 
 export default function BuildingAnalytics() {
   const { id } = useParams();
@@ -133,6 +137,26 @@ export default function BuildingAnalytics() {
         <StatCard title="Anomalies" value={anomalies.length} />
 
         <StatCard title="Online" value={onlineDevices} />
+      </div>
+
+      <div>
+        <h2 className="mb-4 text-3xl font-bold">Building Power Consumption</h2>
+
+        <div className="rounded-2xl border border-cyan-700/40 bg-[#111827] p-5">
+          <PowerChart buildingId={id} />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-4 text-3xl font-bold">Energy by Room</h2>
+
+        <EnergyByRoomChart buildingId={id} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <AnomaliesChart buildingId={id} />
+
+        <SeverityDistributionChart buildingId={id} />
       </div>
 
       <div

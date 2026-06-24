@@ -44,7 +44,6 @@ namespace dorm_energy::storage
 
         void flush() override;
 
-        // Anomalies
         bool saveAnomaly(
             const core::SensorReading &reading,
             const std::string &anomalyType,
@@ -56,25 +55,28 @@ namespace dorm_energy::storage
             std::size_t limit = 20,
             int organizationId = 0) override;
 
-        // Dashboard
         std::vector<PowerPointDto> getPowerHistory(
             int hours = 24,
-            int organizationId = 0) override;
+            int organizationId = 0,
+            int buildingId = 0) override;
 
         std::vector<TopConsumerDto> getTopConsumers(
             int limit = 10,
-            int organizationId = 0) override;
+            int organizationId = 0,
+            int buildingId = 0) override;
 
         std::vector<AnomalyStatsDto> getAnomalyStatistics(
-            int organizationId = 0) override;
+            int organizationId = 0,
+            int buildingId = 0) override;
 
         std::vector<EnergyByRoomDto> getEnergyByRoom(
-            int organizationId = 0) override;
+            int organizationId = 0,
+            int buildingId = 0) override;
 
         std::vector<SeverityStatsDto> getSeverityDistribution(
-            int organizationId = 0) override;
+            int organizationId = 0,
+            int buildingId = 0) override;
 
-        // Device catalog
         std::vector<DeviceDto> getDevices(
             int organizationId = 0) override;
 
@@ -83,6 +85,9 @@ namespace dorm_energy::storage
 
         std::vector<RoomDto> getRooms(
             int organizationId = 0) override;
+
+        std::optional<RoomDetectionProfileDto> getRoomDetectionProfileByDeviceId(
+            const std::string &deviceId) override;
 
         int createBuildingForOrganization(
             int organizationId,
@@ -94,7 +99,10 @@ namespace dorm_energy::storage
             int buildingId,
             const std::string &roomName,
             const std::string &roomType,
-            int floorNumber) override;
+            int floorNumber,
+            double minNormalPowerKw = 0.0,
+            double maxNormalPowerKw = 2.8,
+            bool allowUnattendedPower = false) override;
 
         bool createDeviceForRoom(
             const std::string &deviceId,
@@ -103,7 +111,39 @@ namespace dorm_energy::storage
             const std::string &firmwareVersion,
             int roomId) override;
 
-        // Users
+        bool updateBuilding(
+            int buildingId,
+            int organizationId,
+            const std::string &name,
+            const std::string &address,
+            const std::string &description) override;
+
+        bool deleteBuilding(
+            int buildingId) override;
+
+        bool updateRoom(
+            int roomId,
+            int buildingId,
+            const std::string &roomName,
+            const std::string &roomType,
+            int floorNumber,
+            double minNormalPowerKw,
+            double maxNormalPowerKw,
+            bool allowUnattendedPower) override;
+
+        bool deleteRoom(
+            int roomId) override;
+
+        bool updateDevice(
+            const std::string &deviceId,
+            const std::string &deviceName,
+            const std::string &deviceModel,
+            const std::string &firmwareVersion,
+            int roomId) override;
+
+        bool deleteDevice(
+            const std::string &deviceId) override;
+
         std::optional<UserDto> findUserByEmail(
             const std::string &email) override;
 
@@ -117,11 +157,12 @@ namespace dorm_energy::storage
             int userId,
             const std::string &telegramChatId) override;
 
-        // Subscriptions
         SubscriptionDto getUserSubscription(
             int userId) override;
 
-        // Admin
+        SubscriptionDto upgradeUserSubscription(
+            int userId) override;
+
         Json::Value getAdminOverview() override;
 
     private:

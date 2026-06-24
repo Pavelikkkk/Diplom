@@ -9,7 +9,6 @@ const icons = {
   status: "\u2705",
   buildings: "\u{1F3E2}",
   rooms: "\u{1F6AA}",
-  devices: "\u{1F4E1}",
   anomalies: "\u26A0\uFE0F",
   notifications: "\u{1F4E8}",
   dashboard: "\u{1F4CA}",
@@ -76,11 +75,6 @@ export default function Subscription() {
           />
         )}
         <LimitCard icon={icons.rooms} label="Rooms" value={account.subscription.maxRooms} />
-        <LimitCard
-          icon={icons.devices}
-          label="Devices"
-          value={account.subscription.maxDevices}
-        />
       </div>
 
       <div className="rounded-lg border border-cyan-700/40 bg-[#182234] p-5 2xl:p-6">
@@ -90,7 +84,6 @@ export default function Subscription() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Feature icon={icons.rooms} label="Rooms" />
-          <Feature icon={icons.devices} label="Devices" />
           <Feature icon={icons.anomalies} label="Anomaly Detection" />
           <Feature icon={icons.notifications} label="Notifications" />
           {isBusiness && <Feature icon={icons.buildings} label="Buildings" />}

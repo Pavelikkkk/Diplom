@@ -8,6 +8,17 @@ export async function getUserBuildings() {
   return request<Building[]>("/buildings");
 }
 
+export async function createUserBuilding(input: {
+  name: string;
+  address?: string;
+  description?: string;
+}) {
+  return request<{ id: number }>("/buildings", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getUserBuilding(id: string) {
   const buildings = await getUserBuildings();
 

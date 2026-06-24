@@ -32,7 +32,13 @@ export default function BuildingDetails() {
 
         setRooms(roomsData.filter((r) => String(r.buildingId) === id));
 
-        setDevices(devicesData);
+        const buildingRoomIds = new Set(
+          roomsData
+            .filter((room) => String(room.buildingId) === id)
+            .map((room) => room.roomId),
+        );
+
+        setDevices(devicesData.filter((device) => buildingRoomIds.has(device.roomId)));
       } catch (error) {
         console.error(error);
       }
@@ -181,7 +187,7 @@ export default function BuildingDetails() {
 
                 <div>
                   📡 Devices:{" "}
-                  {devices.filter((device) => device.roomId === room.id).length}
+                  {devices.filter((device) => device.roomId === room.roomId).length}
                 </div>
               </div>
             </div>

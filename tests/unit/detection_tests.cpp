@@ -86,6 +86,41 @@ TEST(RuleBasedDetectorTest, IgnoresNormalStateAndRejectsInvalidThreshold)
     EXPECT_THROW(RuleBasedDetector invalidDetector(config), std::invalid_argument);
 }
 
+TEST(RuleBasedDetectorTest, DetectsSpikeAgainstLearnedRoomBaseline)
+{
+    dorm_energy::detection::RuleBasedDetectorConfig config;
+    config.baselineMinPowerSamples = 3;
+    config.baselineSpikeMarginKw = 1.0;
+    RuleBasedDetector detector(config);
+
+    DetectionContext context{};
+    context.current.power = 2.6;
+    context.baselineAveragePowerKw = 1.5;
+    context.baselinePowerSampleCount = 3;
+
+    const auto result = detector.detect(context);
+
+    EXPECT_TRUE(result.isAnomaly);
+    EXPECT_EQ(result.anomalyType, "rule_baseline_power_spike");
+}
+
+TEST(RuleBasedDetectorTest, WaitsForEnoughBaselineSamplesBeforeBaselineSpike)
+{
+    dorm_energy::detection::RuleBasedDetectorConfig config;
+    config.baselineMinPowerSamples = 10;
+    config.baselineSpikeMarginKw = 1.0;
+    RuleBasedDetector detector(config);
+
+    DetectionContext context{};
+    context.current.power = 2.6;
+    context.baselineAveragePowerKw = 1.5;
+    context.baselinePowerSampleCount = 3;
+
+    const auto result = detector.detect(context);
+
+    EXPECT_FALSE(result.isAnomaly);
+}
+
 TEST(RoomStateAggregatorTest, AggregatesReadingsAndKeepsThirtyMinuteHistory)
 {
     dorm_energy::detection::RoomStateAggregator aggregator;
@@ -113,6 +148,7 @@ TEST(AnomalyTrackerTest, SuppressesDuplicatesUntilRoomIsResolved)
     dorm_energy::detection::AnomalyTracker tracker;
     RoomState state{};
     state.deviceId = "room-101";
+    state.timestamp = std::chrono::system_clock::from_time_t(1717243200);
 
     AnomalyInfo anomaly{};
     anomaly.anomalyType = "rule_high_power";
@@ -121,6 +157,10 @@ TEST(AnomalyTrackerTest, SuppressesDuplicatesUntilRoomIsResolved)
     EXPECT_FALSE(tracker.shouldReport(state, anomaly));
 
     tracker.resolveRoom("room-101");
+
+    EXPECT_FALSE(tracker.shouldReport(state, anomaly));
+
+    state.timestamp += std::chrono::minutes(10);
 
     EXPECT_TRUE(tracker.shouldReport(state, anomaly));
 }

@@ -16,6 +16,9 @@ namespace dorm_energy::detection
         std::chrono::minutes unattendedWindow{120};
 
         double suddenPowerSpikeKw{3.0};
+        int baselineMinPowerSamples{20};
+        double baselineSpikeMarginKw{1.5};
+        double baselineSustainedMarginKw{0.8};
 
         double repeatedSpikeDeltaKw{2.0};
         int repeatedSpikeMinCount{4};

@@ -239,4 +239,105 @@ namespace dorm_energy::storage
         };
     }
 
+    SubscriptionDto PostgresMeasurementRepository::upgradeUserSubscription(
+        int userId)
+    {
+        pqxx::work txn(*connection_);
+
+        auto row = txn.exec_params1(
+            R"(
+            WITH target_user AS
+            (
+                SELECT id, organization_id, account_type
+                FROM users
+                WHERE id = $1
+            ),
+            updated AS
+            (
+                UPDATE subscriptions
+                SET
+                    plan = CASE
+                        WHEN target_user.account_type = 'BUSINESS' THEN 'ENTERPRISE'
+                        ELSE 'PRO'
+                    END,
+                    status = 'ACTIVE',
+                    max_buildings = CASE
+                        WHEN target_user.account_type = 'BUSINESS' THEN GREATEST(max_buildings, 1000)
+                        ELSE GREATEST(max_buildings, 1)
+                    END,
+                    max_rooms = CASE
+                        WHEN target_user.account_type = 'BUSINESS' THEN GREATEST(max_rooms, 10000)
+                        ELSE GREATEST(max_rooms, 50)
+                    END,
+                    max_devices = CASE
+                        WHEN target_user.account_type = 'BUSINESS' THEN GREATEST(max_devices, 10000)
+                        ELSE GREATEST(max_devices, 50)
+                    END
+                FROM target_user
+                WHERE user_id = $1
+                RETURNING
+                    plan,
+                    status,
+                    max_buildings,
+                    max_rooms,
+                    max_devices
+            ),
+            inserted AS
+            (
+                INSERT INTO subscriptions
+                (
+                    organization_id,
+                    user_id,
+                    plan,
+                    status,
+                    max_buildings,
+                    max_rooms,
+                    max_devices
+                )
+                SELECT
+                    organization_id,
+                    id,
+                    CASE
+                        WHEN account_type = 'BUSINESS' THEN 'ENTERPRISE'
+                        ELSE 'PRO'
+                    END,
+                    'ACTIVE',
+                    CASE
+                        WHEN account_type = 'BUSINESS' THEN 1000
+                        ELSE 1
+                    END,
+                    CASE
+                        WHEN account_type = 'BUSINESS' THEN 10000
+                        ELSE 50
+                    END,
+                    CASE
+                        WHEN account_type = 'BUSINESS' THEN 10000
+                        ELSE 50
+                    END
+                FROM target_user
+                WHERE NOT EXISTS (SELECT 1 FROM updated)
+                RETURNING
+                    plan,
+                    status,
+                    max_buildings,
+                    max_rooms,
+                    max_devices
+            )
+            SELECT * FROM updated
+            UNION ALL
+            SELECT * FROM inserted
+            )",
+            userId);
+
+        txn.commit();
+
+        return SubscriptionDto{
+            .plan = row["plan"].c_str(),
+            .status = row["status"].c_str(),
+            .maxBuildings = row["max_buildings"].as<int>(0),
+            .maxRooms = row["max_rooms"].as<int>(0),
+            .maxDevices = row["max_devices"].as<int>(0),
+        };
+    }
+
 } // namespace dorm_energy::storage

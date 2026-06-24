@@ -212,117 +212,77 @@ namespace dorm_energy::storage
         pqxx::work &txn,
         const std::string &deviceId)
     {
-        txn.exec(
+        const auto result = txn.exec_params(
             R"(
-            WITH selected_organization AS (
+            WITH admin_org AS (
                 SELECT organization_id AS id
                 FROM users
-                WHERE role = 'ADMIN'
-                  AND organization_id IS NOT NULL
-                ORDER BY id
-                LIMIT 1
-            ),
-            inserted_organization AS (
-                INSERT INTO organizations (name, type)
-                SELECT
-                    'MQTT Auto Workspace',
-                    'BUSINESS'
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM selected_organization
-                )
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM organizations
-                )
-                RETURNING id
-            ),
-            fallback_organization AS (
-                SELECT id
-                FROM selected_organization
-                UNION ALL
-                SELECT id
-                FROM inserted_organization
-                UNION ALL
-                SELECT id
-                FROM organizations
-                ORDER BY id
+                WHERE email = 'admin@dorm.energy'
+                   OR username = 'admin'
+                ORDER BY
+                    CASE WHEN email = 'admin@dorm.energy' THEN 0 ELSE 1 END
                 LIMIT 1
             ),
             inserted_building AS (
-                INSERT INTO buildings (name, address, description, organization_id)
-                SELECT
-                    'MQTT Auto Devices',
-                    'Automatically created from MQTT telemetry',
-                    'Fallback catalog entry for live telemetry devices',
-                    org.id
-                FROM fallback_organization org
+                INSERT INTO buildings (organization_id, name, address, description)
+                SELECT id, 'MQTT Auto Devices', 'MQTT telemetry', 'Automatically created from MQTT telemetry'
+                FROM admin_org
                 WHERE NOT EXISTS (
                     SELECT 1
-                    FROM buildings existing_building
-                    WHERE existing_building.name = 'MQTT Auto Devices'
-                      AND existing_building.organization_id = org.id
+                    FROM buildings
+                    WHERE organization_id = admin_org.id
+                      AND name = 'MQTT Auto Devices'
                 )
                 RETURNING id
             ),
-            selected_building AS (
-                SELECT id
-                FROM inserted_building
+            target_building AS (
+                SELECT id FROM inserted_building
                 UNION ALL
-                SELECT buildings.id
-                FROM buildings
-                JOIN fallback_organization org
-                    ON org.id = buildings.organization_id
-                WHERE buildings.name = 'MQTT Auto Devices'
-                ORDER BY id
+                SELECT b.id
+                FROM buildings b
+                JOIN admin_org ao
+                    ON ao.id = b.organization_id
+                WHERE b.name = 'MQTT Auto Devices'
                 LIMIT 1
             ),
             inserted_room AS (
-                INSERT INTO rooms (room_name, room_type, floor_number, building_id)
-                SELECT
-                    $2,
-                    'Telemetry',
-                    0,
-                    id
-                FROM selected_building
+                INSERT INTO rooms (building_id, room_name, room_type, floor_number)
+                SELECT id, 'Auto-discovered devices', 'MQTT', 0
+                FROM target_building
                 WHERE NOT EXISTS (
                     SELECT 1
                     FROM rooms
-                    WHERE room_name = $2
-                      AND building_id = selected_building.id
+                    WHERE building_id = target_building.id
+                      AND room_name = 'Auto-discovered devices'
                 )
                 RETURNING id
             ),
-            selected_room AS (
-                SELECT id
-                FROM inserted_room
+            target_room AS (
+                SELECT id FROM inserted_room
                 UNION ALL
-                SELECT rooms.id
-                FROM rooms
-                JOIN selected_building
-                    ON selected_building.id = rooms.building_id
-                WHERE rooms.room_name = $2
-                ORDER BY id
+                SELECT r.id
+                FROM rooms r
+                JOIN target_building tb
+                    ON tb.id = r.building_id
+                WHERE r.room_name = 'Auto-discovered devices'
                 LIMIT 1
             )
             INSERT INTO devices
                 (device_id, device_name, device_model, firmware_version, room_id, is_online, last_seen_at)
             SELECT
-                $1,
-                $1,
-                'MQTT virtual device',
-                'auto',
-                id,
-                TRUE,
-                NOW()
-            FROM selected_room
+                $1, $1, 'ESP32', 'auto-discovered', id, TRUE, NOW()
+            FROM target_room
             ON CONFLICT (device_id)
             DO UPDATE SET
-                room_id = EXCLUDED.room_id,
                 is_online = TRUE,
                 last_seen_at = NOW()
             )",
-            pqxx::params{deviceId, deviceId});
+            deviceId);
+
+        if (result.affected_rows() == 0)
+        {
+            throw std::runtime_error("Cannot auto-discover device because admin workspace is missing");
+        }
     }
 
 } // namespace dorm_energy::storage
